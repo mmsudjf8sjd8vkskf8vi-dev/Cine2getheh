@@ -15,7 +15,7 @@ async function titulo(url, defecto) {
     return j.title || defecto;
   } catch (e) { return defecto; }
 }
-const tituloVideo = (id) => titulo('https://www.youtube.com/watch?v=' + id, id);
+const tituloVideo = (id, def = id) => titulo('https://www.youtube.com/watch?v=' + id, def);
 const tituloLista = (pl) => titulo('https://www.youtube.com/playlist?list=' + pl, 'Lista de YouTube');
 
 const pos = (e) => e.t + (e.play ? (Date.now() - e.marca) / 1000 : 0);
@@ -73,6 +73,36 @@ io.on('connection', (socket) => {
     const s = socket.data.sala; if (!s || !salas[s]) return;
     salas[s].lista.push({ id, titulo: await tituloVideo(id) });
     io.to(s).emit('lista', salas[s].lista);
+  });
+
+  socket.on('importar', async (ids) => {
+    const s = socket.data.sala, e = salas[s];
+    if (!e || !Array.isArray(ids)) return;
+    ids = [...new Set(ids)].filter(x => /^[\w-]{11}$/.test(x)).slice(0, 200);
+    io.to(s).emit('aviso', 'Importando ' + ids.length + ' videos…');
+    const nuevos = [];
+    for (let i = 0; i < ids.length; i += 10) {
+      const r = await Promise.all(ids.slice(i, i + 10).map(async (id) => ({ id, titulo: await tituloVideo(id, null) })));
+      r.forEach(v => v.titulo && nuevos.push(v));
+    }
+    e.lista.push(...nuevos);
+    io.to(s).emit('lista', e.lista);
+    io.to(s).emit('aviso', 'Listo: ' + nuevos.length + ' videos añadidos.');
+  });
+
+  socket.on('mezclar', () => {
+    const s = socket.data.sala, e = salas[s]; if (!e) return;
+    for (let i = e.lista.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [e.lista[i], e.lista[j]] = [e.lista[j], e.lista[i]];
+    }
+    io.to(s).emit('lista', e.lista);
+  });
+
+  socket.on('vaciar', () => {
+    const s = socket.data.sala, e = salas[s]; if (!e) return;
+    e.lista = [];
+    io.to(s).emit('lista', e.lista);
   });
 
   socket.on('reproducir', (i) => {
