@@ -6,6 +6,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static(__dirname));
 
+const YT_API_KEY = process.env.YT_API_KEY || '';
 const salas = {};
 const okId = (x) => typeof x === 'string' && /^[\w-]{11}$/.test(x);
 
@@ -17,6 +18,34 @@ async function titulo(url, defecto) {
   } catch (e) { return defecto; }
 }
 const tituloVideo = (id, def = id) => titulo('https://www.youtube.com/watch?v=' + id, def);
+
+async function leerPlaylistCompleta(playlistId) {
+  if (!YT_API_KEY || !playlistId) return null;
+  const items = [];
+  let pageToken = '';
+  for (let pagina = 0; pagina < 20; pagina++) {
+    const u = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+    u.searchParams.set('part', 'snippet');
+    u.searchParams.set('playlistId', playlistId);
+    u.searchParams.set('maxResults', '50');
+    u.searchParams.set('key', YT_API_KEY);
+    if (pageToken) u.searchParams.set('pageToken', pageToken);
+
+    const r = await fetch(u.toString());
+    if (!r.ok) break;
+    const j = await r.json();
+    for (const it of (j.items || [])) {
+      const vid = it?.snippet?.resourceId?.videoId;
+      const tit = it?.snippet?.title;
+      if (okId(vid) && tit && tit !== 'Private video' && tit !== 'Deleted video') {
+        items.push({ id: vid, titulo: String(tit).slice(0, 150) });
+      }
+    }
+    pageToken = j.nextPageToken || '';
+    if (!pageToken) break;
+  }
+  return items;
+}
 
 const pos = (e) => e.t + (e.play ? (Date.now() - e.marca) / 1000 : 0);
 const estado = (s) => {
@@ -98,6 +127,16 @@ io.on('connection', (socket) => {
     e.lista.push({ id, titulo: await tituloVideo(id) });
     envLista(io.to(s), e);
     io.to(s).emit('aviso', 'Video añadido a la lista');
+  });
+
+  socket.on('playlistApi', async (playlistId, cb) => {
+    if (typeof cb !== 'function') return;
+    try {
+      const items = await leerPlaylistCompleta(String(playlistId || '').trim());
+      cb(items);
+    } catch (e) {
+      cb(null);
+    }
   });
 
   socket.on('titulos', async (ids, cb) => {
