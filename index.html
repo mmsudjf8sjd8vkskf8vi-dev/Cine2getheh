@@ -417,17 +417,16 @@ function obtenerIds(pl) {
         sinCambios = 0;
       } else if (listoTmp && acum.size > 0) {
         sinCambios++;
-        // Intenta avanzar por el índice para forzar a YouTube a paginar más elementos
         if (sinCambios % 2 === 0 && typeof tmp.playVideoAt === 'function') {
           try {
             const cur = typeof tmp.getPlaylistIndex === 'function' ? tmp.getPlaylistIndex() : 0;
-            const nextIdx = Math.min(acum.size - 1, cur + 5);
+            const nextIdx = Math.min(acum.size - 1, cur + 1);
             if (nextIdx > cur) tmp.playVideoAt(nextIdx);
           } catch (e) {}
         }
       }
 
-      if ((acum.size > 0 && sinCambios >= 8) || ticks > 90) {
+      if ((acum.size > 0 && sinCambios >= 12) || ticks > 160) {
         clearInterval(t);
         try { tmp.destroy(); } catch (e) {}
         caja.remove();
