@@ -102,11 +102,11 @@ io.on('connection', (socket) => {
 
   socket.on('titulos', async (ids, cb) => {
     if (!Array.isArray(ids) || typeof cb !== 'function') return;
-    ids = [...new Set(ids)].filter(okId).slice(0, 200);
+    ids = [...new Set(ids)].filter(okId).slice(0, 1000);
     const out = [];
-    for (let i = 0; i < ids.length; i += 10) {
-      const r = await Promise.all(ids.slice(i, i + 10).map(async (id) => ({ id, titulo: await tituloVideo(id, null) })));
-      r.forEach(v => v.titulo && out.push(v));
+    for (let i = 0; i < ids.length; i += 15) {
+      const r = await Promise.all(ids.slice(i, i + 15).map(async (id) => ({ id, titulo: await tituloVideo(id, id) })));
+      out.push(...r);
     }
     cb(out);
   });
@@ -116,7 +116,7 @@ io.on('connection', (socket) => {
     if (!e || !Array.isArray(items)) return;
     const nuevos = items
       .filter(v => v && okId(v.id) && typeof v.titulo === 'string')
-      .slice(0, 200)
+      .slice(0, 1000)
       .map(v => ({ id: v.id, titulo: v.titulo.slice(0, 150) }));
     e.lista.push(...nuevos);
     envLista(io.to(s), e);
