@@ -447,6 +447,14 @@ async function buscar() {
     return;
   }
   $('bCont').innerHTML = '<div class="spin">⏳ Cargando…</div>';
+  if (resEsLista) {
+    const apiItems = await new Promise((ok) => socket.emit('playlistApi', pl, ok));
+    if (Array.isArray(apiItems) && apiItems.length) {
+      resultados = apiItems;
+      pintarResultados();
+      return;
+    }
+  }
   const ids = resEsLista ? await obtenerIds(pl) : [id];
   if (!ids) { $('bCont').innerHTML = '<p class="gris">No se pudo leer la playlist. ¿Es pública?</p>'; return; }
   $('bCont').innerHTML = `<div class="spin">⏳ Obteniendo títulos de ${ids.length} videos…</div>`;
