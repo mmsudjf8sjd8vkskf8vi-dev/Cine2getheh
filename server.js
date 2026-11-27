@@ -43,28 +43,56 @@ function recoger(obj, out, cont) {
 }
 
 async function leerPlaylist(pl) {
-  const r = await fetch('https://www.youtube.com/playlist?list=' + pl, { headers: CAB, signal: AbortSignal.timeout(15000) });
-  const html = await r.text();
-  const m = html.match(/ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s);
-  if (!m) return null;
-  const key = (html.match(/"INNERTUBE_API_KEY":"([^"]+)"/) || [])[1];
-  const ver = (html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/) || [])[1] || '2.20240101.00.00';
   const out = [], cont = [];
-  recoger(JSON.parse(m[1]), out, cont);
-  let token = cont[0], vueltas = 0;
-  while (token && key && out.length < 5000 && vueltas < 60) {
-    vueltas++;
+  let key = null, ver = '2.20240101.00.00', token = null;
+
+  // Intento 1: leer la página de la playlist
+  try {
+    const r = await fetch('https://www.youtube.com/playlist?list=' + pl, { headers: CAB, signal: AbortSignal.timeout(15000) });
+    const html = await r.text();
+    const m = html.match(/ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s);
+    if (m) {
+      key = (html.match(/"INNERTUBE_API_KEY":"([^"]+)"/) || [])[1];
+      ver = (html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/) || [])[1] || ver;
+      recoger(JSON.parse(m[1]), out, cont);
+      token = cont[0];
+    } else {
+      console.log('Playlist: YouTube no devolvió los datos de la página (status ' + r.status + ')');
+    }
+  } catch (e) { console.log('Playlist: falló la página:', e.message); }
+
+  if (!key) key = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
+  const llamar = async (extra) => {
     const rr = await fetch('https://www.youtube.com/youtubei/v1/browse?key=' + key, {
       method: 'POST',
       headers: { ...CAB, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: ver, hl: 'es', gl: 'US' } }, continuation: token }),
+      body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: ver, hl: 'es', gl: 'US' } }, ...extra }),
       signal: AbortSignal.timeout(15000)
     });
-    const d = await rr.json();
-    const c2 = [];
-    recoger(d, out, c2);
-    token = c2[0];
+    return rr.json();
+  };
+
+  // Intento 2: pedirla directo a la API de YouTube
+  if (!out.length) {
+    try {
+      const c1 = [];
+      recoger(await llamar({ browseId: 'VL' + pl }), out, c1);
+      token = c1[0];
+      if (!out.length) console.log('Playlist: la API directa tampoco devolvió videos');
+    } catch (e) { console.log('Playlist: falló la API directa:', e.message); }
   }
+
+  // Pedir las siguientes tandas hasta terminar
+  let vueltas = 0;
+  while (token && out.length < 5000 && vueltas < 60) {
+    vueltas++;
+    try {
+      const c2 = [];
+      recoger(await llamar({ continuation: token }), out, c2);
+      token = c2[0];
+    } catch (e) { console.log('Playlist: se cortó en la vuelta ' + vueltas + ':', e.message); break; }
+  }
+
   const vistos = new Set();
   return out.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 5000);
 }
