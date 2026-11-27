@@ -7,6 +7,7 @@ const io = new Server(server);
 app.use(express.static(__dirname));
 
 const salas = {};
+const okId = (x) => typeof x === 'string' && /^[\w-]{11}$/.test(x);
 
 async function titulo(url, defecto) {
   try {
@@ -16,26 +17,34 @@ async function titulo(url, defecto) {
   } catch (e) { return defecto; }
 }
 const tituloVideo = (id, def = id) => titulo('https://www.youtube.com/watch?v=' + id, def);
-const tituloLista = (pl) => titulo('https://www.youtube.com/playlist?list=' + pl, 'Lista de YouTube');
 
 const pos = (e) => e.t + (e.play ? (Date.now() - e.marca) / 1000 : 0);
 const estado = (s) => {
   const e = salas[s];
-  return { id: e.id, pl: e.pl, idx: e.idx, titulo: e.titulo, t: pos(e), play: e.play };
+  return { id: e.id, titulo: e.titulo, t: pos(e), play: e.play };
 };
+const envLista = (dest, e) => dest.emit('lista', { items: e.lista, pos: e.pos });
 
 async function usuarios(s) {
   const so = await io.in(s).fetchSockets();
   io.to(s).emit('usuarios', so.map(x => ({ id: x.id, nombre: x.data.nombre, host: x.id === salas[s].host })));
 }
 
-function poner(s, id, tit, pl) {
+function poner(s, id, tit, p) {
   const e = salas[s];
-  Object.assign(e, { id, pl: pl || null, idx: 0, titulo: tit, t: 0, play: true, marca: Date.now() });
-  e.historial.unshift({ id, pl: pl || null, titulo: (pl ? '📺 ' : '') + tit });
-  e.historial = e.historial.slice(0, 30);
+  Object.assign(e, { id, titulo: tit, t: 0, play: true, marca: Date.now(), pos: p });
+  e.historial = [{ id, titulo: tit }, ...e.historial.filter(x => x.id !== id)].slice(0, 50);
   io.to(s).emit('estado', estado(s));
   io.to(s).emit('historial', e.historial);
+  io.to(s).emit('chatVideo', { id, titulo: tit });
+  envLista(io.to(s), e);
+}
+
+function siguienteDe(s) {
+  const e = salas[s];
+  const n = e.lista[e.pos + 1];
+  if (n) poner(s, n.id, n.titulo, e.pos + 1);
+  else io.to(s).emit('aviso', 'No hay más videos en la lista');
 }
 
 io.on('connection', (socket) => {
@@ -43,58 +52,96 @@ io.on('connection', (socket) => {
     socket.join(sala);
     socket.data.sala = sala;
     socket.data.nombre = String(nombre || 'Invitado').slice(0, 20);
-    const e = (salas[sala] = salas[sala] || { id: null, pl: null, idx: 0, titulo: '', t: 0, play: false, marca: Date.now(), host: null, lista: [], historial: [] });
+    const e = (salas[sala] = salas[sala] || { id: null, titulo: '', t: 0, play: false, marca: Date.now(), host: null, lista: [], pos: -1, historial: [] });
     if (!e.host) e.host = socket.id;
-    if (e.id || e.pl) socket.emit('estado', estado(sala));
-    socket.emit('lista', e.lista);
+    if (e.id) socket.emit('estado', estado(sala));
+    envLista(socket, e);
     socket.emit('historial', e.historial);
     usuarios(sala);
   });
 
+  socket.on('nombre', (n) => {
+    const s = socket.data.sala; if (!s || typeof n !== 'string') return;
+    socket.data.nombre = n.trim().slice(0, 20) || socket.data.nombre;
+    usuarios(s);
+  });
+
   socket.on('cargar', async (id) => {
-    const s = socket.data.sala; if (!s || !salas[s]) return;
-    poner(s, id, await tituloVideo(id));
-  });
-
-  socket.on('cargarPl', async (pl) => {
-    const s = socket.data.sala; if (!s || !salas[s]) return;
-    if (!/^[\w-]+$/.test(pl)) return;
-    poner(s, null, await tituloLista(pl), pl);
-  });
-
-  socket.on('indice', (idx) => {
     const s = socket.data.sala, e = salas[s];
-    if (!e || !e.pl || e.idx === idx) return;
-    Object.assign(e, { idx, t: 0, play: true, marca: Date.now() });
-    socket.to(s).emit('estado', estado(s));
+    if (!e || !okId(id)) return;
+    const i = e.lista.findIndex(x => x.id === id);
+    poner(s, id, i >= 0 ? e.lista[i].titulo : await tituloVideo(id), i);
+  });
+
+  socket.on('reproducir', (i) => {
+    const s = socket.data.sala, e = salas[s];
+    if (!e || !e.lista[i]) return;
+    poner(s, e.lista[i].id, e.lista[i].titulo, i);
+  });
+
+  socket.on('siguiente', () => {
+    const s = socket.data.sala; if (!s || !salas[s]) return;
+    siguienteDe(s);
+  });
+
+  socket.on('fin', (id) => {
+    const s = socket.data.sala, e = salas[s];
+    if (!e || e.id !== id) return;
+    const n = e.lista[e.pos + 1];
+    if (n) poner(s, n.id, n.titulo, e.pos + 1);
+    else { e.play = false; e.t = 0; }
   });
 
   socket.on('agregar', async (id) => {
-    const s = socket.data.sala; if (!s || !salas[s]) return;
-    salas[s].lista.push({ id, titulo: await tituloVideo(id) });
-    io.to(s).emit('lista', salas[s].lista);
+    const s = socket.data.sala, e = salas[s];
+    if (!e || !okId(id)) return;
+    e.lista.push({ id, titulo: await tituloVideo(id) });
+    envLista(io.to(s), e);
+    io.to(s).emit('aviso', 'Video añadido a la lista');
   });
 
-  socket.on('importar', async (ids) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || !Array.isArray(ids)) return;
-    ids = [...new Set(ids)].filter(x => /^[\w-]{11}$/.test(x)).slice(0, 200);
-    io.to(s).emit('aviso', 'Importando ' + ids.length + ' videos…');
-    const nuevos = [];
+  socket.on('titulos', async (ids, cb) => {
+    if (!Array.isArray(ids) || typeof cb !== 'function') return;
+    ids = [...new Set(ids)].filter(okId).slice(0, 200);
+    const out = [];
     for (let i = 0; i < ids.length; i += 10) {
       const r = await Promise.all(ids.slice(i, i + 10).map(async (id) => ({ id, titulo: await tituloVideo(id, null) })));
-      r.forEach(v => v.titulo && nuevos.push(v));
+      r.forEach(v => v.titulo && out.push(v));
     }
+    cb(out);
+  });
+
+  socket.on('importar', (items, cb) => {
+    const s = socket.data.sala, e = salas[s];
+    if (!e || !Array.isArray(items)) return;
+    const nuevos = items
+      .filter(v => v && okId(v.id) && typeof v.titulo === 'string')
+      .slice(0, 200)
+      .map(v => ({ id: v.id, titulo: v.titulo.slice(0, 150) }));
     e.lista.push(...nuevos);
-    io.to(s).emit('lista', e.lista);
-    io.to(s).emit('aviso', 'Listo: ' + nuevos.length + ' videos añadidos.');
+    envLista(io.to(s), e);
+    io.to(s).emit('aviso', nuevos.length + ' videos añadidos a la lista');
+    if (typeof cb === 'function') cb(nuevos.length);
+  });
+
+  socket.on('sugerir', (v) => {
+    const s = socket.data.sala; if (!s || !v || !okId(v.id) || typeof v.titulo !== 'string') return;
+    io.to(s).emit('chatVideo', { id: v.id, titulo: v.titulo.slice(0, 150), nombre: socket.data.nombre });
   });
 
   socket.on('renombrar', ({ i, titulo }) => {
     const s = socket.data.sala, e = salas[s];
     if (!e || !e.lista[i] || typeof titulo !== 'string') return;
     e.lista[i].titulo = titulo.trim().slice(0, 150) || e.lista[i].titulo;
-    io.to(s).emit('lista', e.lista);
+    envLista(io.to(s), e);
+  });
+
+  socket.on('quitar', (i) => {
+    const s = socket.data.sala, e = salas[s];
+    if (!e || !e.lista[i]) return;
+    e.lista.splice(i, 1);
+    if (i <= e.pos) e.pos--;
+    envLista(io.to(s), e);
   });
 
   socket.on('mezclar', () => {
@@ -103,40 +150,19 @@ io.on('connection', (socket) => {
       const j = Math.floor(Math.random() * (i + 1));
       [e.lista[i], e.lista[j]] = [e.lista[j], e.lista[i]];
     }
-    io.to(s).emit('lista', e.lista);
+    e.pos = e.lista.findIndex(x => x.id === e.id);
+    envLista(io.to(s), e);
   });
 
   socket.on('vaciar', () => {
     const s = socket.data.sala, e = salas[s]; if (!e) return;
-    e.lista = [];
-    io.to(s).emit('lista', e.lista);
+    e.lista = []; e.pos = -1;
+    envLista(io.to(s), e);
   });
 
-  socket.on('reproducir', (i) => {
-    const s = socket.data.sala, e = salas[s]; if (!e || !e.lista[i]) return;
-    const it = e.lista.splice(i, 1)[0];
-    poner(s, it.id, it.titulo);
-    io.to(s).emit('lista', e.lista);
-  });
-
-  socket.on('quitar', (i) => {
-    const s = socket.data.sala, e = salas[s]; if (!e || !e.lista[i]) return;
-    e.lista.splice(i, 1);
-    io.to(s).emit('lista', e.lista);
-  });
-
-  socket.on('fin', (id) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || e.id !== id) return;
-    const sig = e.lista.shift();
-    if (sig) { poner(s, sig.id, sig.titulo); io.to(s).emit('lista', e.lista); }
-    else { e.play = false; e.t = 0; }
-  });
-
-  socket.on('control', ({ play, t, idx }) => {
+  socket.on('control', ({ play, t }) => {
     const s = socket.data.sala; if (!s || !salas[s]) return;
     Object.assign(salas[s], { play, t, marca: Date.now() });
-    if (typeof idx === 'number' && salas[s].pl) salas[s].idx = idx;
     socket.to(s).emit('estado', estado(s));
   });
 
