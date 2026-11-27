@@ -53,9 +53,10 @@ button{background:#2b3648;color:#fff}
   <div id="tit">Sin video</div>
   <div class="caja" style="padding-top:0">
     <div class="fila">
-      <input id="enlace" placeholder="Pega un enlace de YouTube">
+      <input id="enlace" placeholder="Pega un enlace o playlist de YouTube">
       <button class="am" onclick="cargar()">▶</button>
       <button onclick="agregar()">➕</button>
+      <button onclick="siguiente()">⏭</button>
     </div>
     <div class="pests" id="pests">
       <button class="on" data-p="pUsu">👥 Personas</button>
@@ -90,6 +91,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 const socket = io();
 let yt, listo = false, ignorar = false, pendiente = null;
 let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
+let plActual = null, lastIdx = 0;
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -143,11 +145,20 @@ function crearPlayer() {
     width: '100%', height: '100%', playerVars: { playsinline: 1 },
     events: {
       onReady: () => { listo = true; if (pendiente) aplicar(pendiente); },
+      onError: () => {
+        if (plActual) yt.nextVideo();
+        else alert('Este video no permite reproducirse aquí. Prueba con otro.');
+      },
       onStateChange: (e) => {
         if (ignorar) return;
-        if (e.data === 1) socket.emit('control', { play: true, t: yt.getCurrentTime() });
-        if (e.data === 2) socket.emit('control', { play: false, t: yt.getCurrentTime() });
-        if (e.data === 0) socket.emit('fin', yt.getVideoData().video_id);
+        if (e.data === 0) { socket.emit('fin', yt.getVideoData().video_id); return; }
+        if (e.data === 1 || e.data === 2) {
+          const idx = plActual ? yt.getPlaylistIndex() : undefined;
+          if (plActual && e.data === 1 && idx !== lastIdx) {
+            lastIdx = idx; socket.emit('indice', idx); return;
+          }
+          socket.emit('control', { play: e.data === 1, t: yt.getCurrentTime(), idx });
+        }
       }
     }
   });
@@ -159,27 +170,59 @@ function idDe(url) {
   return m ? m[1] : null;
 }
 function leerEnlace() {
-  const id = idDe($('enlace').value);
-  if (!id) { alert('Enlace de YouTube no válido'); return null; }
-  $('enlace').value = ''; return id;
+  const url = $('enlace').value;
+  let pl = (url.match(/[?&]list=([\w-]+)/) || [])[1];
+  const id = idDe(url);
+  if (pl && /^RD/.test(pl) && id) pl = undefined;
+  if (!pl && !id) { alert('Enlace de YouTube no válido'); return null; }
+  $('enlace').value = '';
+  return { pl, id };
 }
-function cargar() { const id = leerEnlace(); if (id) socket.emit('cargar', id); }
-function agregar() { const id = leerEnlace(); if (id) socket.emit('agregar', id); }
+function cargar() {
+  const r = leerEnlace(); if (!r) return;
+  r.pl ? socket.emit('cargarPl', r.pl) : socket.emit('cargar', r.id);
+}
+function agregar() {
+  const r = leerEnlace(); if (!r) return;
+  if (r.pl) return alert('Las playlists de YouTube se reproducen con el botón ▶');
+  socket.emit('agregar', r.id);
+}
+function siguiente() {
+  if (!listo) return;
+  if (plActual) yt.nextVideo();
+  else socket.emit('fin', yt.getVideoData().video_id);
+}
 
 function aplicar(e) {
   if (!listo) { pendiente = e; return; }
-  if (!e.id) return;
+  if (!e.id && !e.pl) return;
   $('tit').textContent = e.titulo || '';
   ignorar = true;
-  const actual = yt.getVideoData && yt.getVideoData().video_id;
-  if (actual !== e.id) {
-    yt.loadVideoById(e.id, e.t);
-    if (!e.play) setTimeout(() => yt.pauseVideo(), 500);
+  if (e.pl) {
+    lastIdx = e.idx;
+    if (plActual !== e.pl) {
+      plActual = e.pl;
+      yt.loadPlaylist({ listType: 'playlist', list: e.pl, index: e.idx, startSeconds: e.t });
+      if (!e.play) setTimeout(() => yt.pauseVideo(), 1500);
+    } else if (yt.getPlaylistIndex() !== e.idx) {
+      yt.playVideoAt(e.idx);
+      if (!e.play) setTimeout(() => yt.pauseVideo(), 1500);
+    } else {
+      if (Math.abs(yt.getCurrentTime() - e.t) > 1.5) yt.seekTo(e.t, true);
+      e.play ? yt.playVideo() : yt.pauseVideo();
+    }
   } else {
-    if (Math.abs(yt.getCurrentTime() - e.t) > 1.5) yt.seekTo(e.t, true);
-    e.play ? yt.playVideo() : yt.pauseVideo();
+    plActual = null;
+    const actual = yt.getVideoData && yt.getVideoData().video_id;
+    if (actual !== e.id) {
+      yt.loadVideoById(e.id, e.t);
+      if (!e.play) setTimeout(() => yt.pauseVideo(), 500);
+    } else {
+      if (Math.abs(yt.getCurrentTime() - e.t) > 1.5) yt.seekTo(e.t, true);
+      e.play ? yt.playVideo() : yt.pauseVideo();
+    }
   }
-  setTimeout(() => ignorar = false, 1000);
+  setTimeout(() => ignorar = false, 1500);
 }
 socket.on('estado', aplicar);
 
@@ -191,7 +234,7 @@ socket.on('lista', (l) => {
 });
 socket.on('historial', (l) => {
   $('pHist').innerHTML = l.length ? l.map(v =>
-    `<div class="item"><span>${esc(v.titulo)}</span><button onclick="socket.emit('cargar','${esc(v.id)}')">▶</button></div>`).join('')
+    `<div class="item"><span>${esc(v.titulo)}</span><button onclick="socket.emit('${v.pl ? 'cargarPl' : 'cargar'}','${esc(v.pl || v.id)}')">▶</button></div>`).join('')
     : '<p>Aún no hay historial.</p>';
 });
 
