@@ -32,6 +32,7 @@ function recoger(obj, out, cont) {
     const r = obj.playlistVideoRenderer;
     const t = r.title && (r.title.runs ? r.title.runs.map(x => x.text).join('') : r.title.simpleText);
     if (r.videoId && t && r.isPlayable !== false) out.push({ id: r.videoId, titulo: t });
+    else out.omitidos = (out.omitidos || 0) + 1;
   }
   if (obj.continuationItemRenderer) {
     const tk = obj.continuationItemRenderer.continuationEndpoint &&
@@ -93,6 +94,7 @@ async function leerPlaylist(pl) {
     } catch (e) { console.log('Playlist: se cortó en la vuelta ' + vueltas + ':', e.message); break; }
   }
 
+  console.log('Playlist: leidos ' + out.length + ', omitidos (privados/borrados) ' + (out.omitidos || 0) + ', vueltas ' + vueltas + ', quedaba mas: ' + (token ? 'si' : 'no'));
   const vistos = new Set();
   return out.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 5000);
 }
