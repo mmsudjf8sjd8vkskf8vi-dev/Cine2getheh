@@ -16,6 +16,7 @@ button{background:#2b3648;color:#fff}
 .salaItem{background:#1f2937;border-radius:10px;padding:16px;margin:8px 0}
 #player{width:100%;aspect-ratio:16/9;background:#000}
 #tit{padding:8px 14px;font-weight:bold;font-size:14px}
+#aviso{font-size:13px;color:#fbbf24;min-height:16px}
 .fila{display:flex;gap:6px;margin:6px 0}
 .pests{display:flex;gap:4px;overflow-x:auto;border-bottom:2px solid #1f2937}
 .pests button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap}
@@ -30,6 +31,7 @@ button{background:#2b3648;color:#fff}
 .tile .rey{position:absolute;top:6px;left:6px;font-size:20px;z-index:2}
 #chat{height:220px;overflow:auto;background:#1f2937;border-radius:8px;padding:8px}
 .item{display:flex;gap:6px;align-items:center;background:#1f2937;border-radius:8px;padding:8px;margin:6px 0}
+.item img{width:90px;border-radius:6px}
 .item span{flex:1;font-size:14px}
 .item button{padding:8px 12px}
 .barra{position:sticky;bottom:0;background:#111827;display:flex;gap:6px;padding:8px 14px;justify-content:center}
@@ -58,6 +60,7 @@ button{background:#2b3648;color:#fff}
       <button onclick="agregar()">➕</button>
       <button onclick="siguiente()">⏭</button>
     </div>
+    <div id="aviso"></div>
     <div class="pests" id="pests">
       <button class="on" data-p="pUsu">👥 Personas</button>
       <button data-p="pChat">💬 Chat</button>
@@ -91,9 +94,16 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 const socket = io();
 let yt, listo = false, ignorar = false, pendiente = null;
 let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
-let plActual = null, lastIdx = 0;
+let plActual = null, lastIdx = 0, avisoT;
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+function aviso(t) {
+  $('aviso').textContent = t;
+  clearTimeout(avisoT);
+  avisoT = setTimeout(() => $('aviso').textContent = '', 7000);
+}
+socket.on('aviso', aviso);
 
 /* ---------- Salas guardadas ---------- */
 function guardadas() { try { return JSON.parse(localStorage.getItem('salas') || '[]'); } catch (e) { return []; } }
@@ -147,7 +157,7 @@ function crearPlayer() {
       onReady: () => { listo = true; if (pendiente) aplicar(pendiente); },
       onError: () => {
         if (plActual) yt.nextVideo();
-        else alert('Este video no permite reproducirse aquí. Prueba con otro.');
+        else { aviso('Video no disponible aquí, saltando…'); socket.emit('fin', yt.getVideoData().video_id); }
       },
       onStateChange: (e) => {
         if (ignorar) return;
@@ -184,13 +194,41 @@ function cargar() {
 }
 function agregar() {
   const r = leerEnlace(); if (!r) return;
-  if (r.pl) return alert('Las playlists de YouTube se reproducen con el botón ▶');
-  socket.emit('agregar', r.id);
+  r.pl ? importar(r.pl) : socket.emit('agregar', r.id);
 }
 function siguiente() {
   if (!listo) return;
   if (plActual) yt.nextVideo();
   else socket.emit('fin', yt.getVideoData().video_id);
+}
+
+/* ---------- Importar playlist a la lista de la sala ---------- */
+function importar(pl) {
+  if (!window.YT || !YT.Player) return aviso('Espera un momento y vuelve a intentar.');
+  aviso('Leyendo la playlist… (unos segundos)');
+  const caja = document.createElement('div');
+  caja.style.cssText = 'position:fixed;left:-9999px;top:0;width:220px;height:220px';
+  const hijo = document.createElement('div');
+  caja.appendChild(hijo);
+  document.body.appendChild(caja);
+  const tmp = new YT.Player(hijo, {
+    width: 220, height: 220,
+    events: { onReady: () => tmp.cuePlaylist({ listType: 'playlist', list: pl }) }
+  });
+  const limpiar = () => { try { tmp.destroy(); } catch (e) {} caja.remove(); };
+  let n = 0;
+  const t = setInterval(() => {
+    n++;
+    let ids = null;
+    try { ids = tmp.getPlaylist && tmp.getPlaylist(); } catch (e) {}
+    if (ids && ids.length) {
+      clearInterval(t); limpiar();
+      socket.emit('importar', ids);
+    } else if (n > 30) {
+      clearInterval(t); limpiar();
+      aviso('No se pudo leer la playlist. ¿Es pública?');
+    }
+  }, 500);
 }
 
 function aplicar(e) {
@@ -228,9 +266,11 @@ socket.on('estado', aplicar);
 
 /* ---------- Lista e historial ---------- */
 socket.on('lista', (l) => {
-  $('pLista').innerHTML = l.length ? l.map((v, i) =>
-    `<div class="item"><span>${esc(v.titulo)}</span><button class="am" onclick="socket.emit('reproducir',${i})">▶</button><button onclick="socket.emit('quitar',${i})">✕</button></div>`).join('')
-    : '<p>Esta lista de reproducción no tiene contenido.</p>';
+  if (!l.length) { $('pLista').innerHTML = '<p>Esta lista de reproducción no tiene contenido.</p>'; return; }
+  $('pLista').innerHTML =
+    `<div class="fila"><button class="am" onclick="socket.emit('reproducir',0)">▶ Reproducir todo</button><button onclick="socket.emit('mezclar')">🔀</button><button onclick="socket.emit('vaciar')">🗑</button></div><p style="font-size:13px">${l.length} videos</p>` +
+    l.map((v, i) =>
+      `<div class="item"><img src="https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg"><span>${esc(v.titulo)}</span><button class="am" onclick="socket.emit('reproducir',${i})">▶</button><button onclick="socket.emit('quitar',${i})">✕</button></div>`).join('');
 });
 socket.on('historial', (l) => {
   $('pHist').innerHTML = l.length ? l.map(v =>
