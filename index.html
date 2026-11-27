@@ -105,7 +105,7 @@ button{background:#2b3648;color:#fff}
 .res .mini{width:110px;height:68px;border-radius:8px}
 .rt{flex:1;font-size:14px}
 .rt button{display:block;font-size:12px;padding:6px 10px;margin-top:6px}
-.spin{text-align:center;padding:30px;font-size:28px}
+.spin{text-align:center;padding:30px;font-size:18px}
 #toast{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#374151;color:#fff;padding:10px 16px;border-radius:10px;z-index:100;font-size:14px;max-width:90%}
 </style>
 </head>
@@ -389,26 +389,51 @@ function obtenerIds(pl) {
     caja.style.cssText = 'position:fixed;left:-9999px;top:0;width:220px;height:220px';
     const hijo = document.createElement('div');
     caja.appendChild(hijo); document.body.appendChild(caja);
-    let ultimoLen = 0, estable = 0, n = 0;
+    const acum = new Set();
+    let sinCambios = 0, ticks = 0, listoTmp = false;
+
     const tmp = new YT.Player(hijo, {
       width: 220, height: 220,
-      events: { onReady: () => tmp.cuePlaylist({ listType: 'playlist', list: pl, index: 0 }) }
+      playerVars: { mute: 1, playsinline: 1 },
+      events: {
+        onReady: () => {
+          listoTmp = true;
+          tmp.cuePlaylist({ listType: 'playlist', list: pl, index: 0 });
+        }
+      }
     });
+
     const t = setInterval(() => {
-      n++;
+      ticks++;
       let ids = null;
       try { ids = tmp.getPlaylist && tmp.getPlaylist(); } catch (e) {}
-      if (ids && ids.length) {
-        if (ids.length === ultimoLen) estable++;
-        else { ultimoLen = ids.length; estable = 0; }
+      const antes = acum.size;
+      if (Array.isArray(ids)) ids.forEach(x => x && acum.add(x));
+
+      const sp = $('bCont').querySelector('.spin');
+      if (sp) sp.textContent = `⏳ Leyendo playlist… (${acum.size} videos)`;
+
+      if (acum.size > antes) {
+        sinCambios = 0;
+      } else if (listoTmp && acum.size > 0) {
+        sinCambios++;
+        // Intenta avanzar por el índice para forzar a YouTube a paginar más elementos
+        if (sinCambios % 2 === 0 && typeof tmp.playVideoAt === 'function') {
+          try {
+            const cur = typeof tmp.getPlaylistIndex === 'function' ? tmp.getPlaylistIndex() : 0;
+            const nextIdx = Math.min(acum.size - 1, cur + 5);
+            if (nextIdx > cur) tmp.playVideoAt(nextIdx);
+          } catch (e) {}
+        }
       }
-      if ((ids && ids.length && estable >= 3) || n > 60) {
+
+      if ((acum.size > 0 && sinCambios >= 8) || ticks > 90) {
         clearInterval(t);
         try { tmp.destroy(); } catch (e) {}
         caja.remove();
-        ok(ids && ids.length ? ids : null);
+        ok(acum.size ? [...acum] : null);
       }
-    }, 500);
+    }, 400);
   });
 }
 
@@ -422,9 +447,10 @@ async function buscar() {
     $('bCont').innerHTML = '<p class="gris">Pega un enlace de YouTube (video o playlist) y toca 🔍. La búsqueda por texto no está disponible.</p>';
     return;
   }
-  $('bCont').innerHTML = '<div class="spin">⏳</div>';
+  $('bCont').innerHTML = '<div class="spin">⏳ Cargando…</div>';
   const ids = resEsLista ? await obtenerIds(pl) : [id];
   if (!ids) { $('bCont').innerHTML = '<p class="gris">No se pudo leer la playlist. ¿Es pública?</p>'; return; }
+  $('bCont').innerHTML = `<div class="spin">⏳ Obteniendo títulos de ${ids.length} videos…</div>`;
   socket.emit('titulos', ids, (res) => { resultados = res; pintarResultados(); });
 }
 function pintarResultados() {
