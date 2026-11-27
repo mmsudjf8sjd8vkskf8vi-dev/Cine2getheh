@@ -19,7 +19,7 @@ button{background:#2b3648;color:#fff}
 #aviso{font-size:13px;color:#fbbf24;min-height:16px}
 .fila{display:flex;gap:6px;margin:6px 0}
 .pests{display:flex;gap:4px;overflow-x:auto;border-bottom:2px solid #1f2937}
-.pests button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap}
+.pests button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap;font-size:15px}
 .pests button.on{color:#fff;border-bottom:3px solid #fbbf24}
 .panel{display:none;padding:8px 0;min-height:200px}
 .panel.on{display:block}
@@ -30,11 +30,21 @@ button{background:#2b3648;color:#fff}
 .tile .nom{position:absolute;bottom:0;left:0;right:0;background:#15803d;text-align:center;padding:3px}
 .tile .rey{position:absolute;top:6px;left:6px;font-size:20px;z-index:2}
 #chat{height:220px;overflow:auto;background:#1f2937;border-radius:8px;padding:8px}
-.item{display:flex;gap:6px;align-items:center;background:#1f2937;border-radius:8px;padding:8px;margin:6px 0}
-.item img{width:90px;border-radius:6px}
-.item span{flex:1;font-size:14px}
-.item button{padding:8px 12px}
 .barra{position:sticky;bottom:0;background:#111827;display:flex;gap:6px;padding:8px 14px;justify-content:center}
+
+/* Lista de reproducción estilo Watch2Gether */
+.tb{display:flex;align-items:center;gap:2px;border-bottom:2px solid #1f2937;margin-bottom:6px}
+.tb button{background:none;padding:8px 12px;font-size:20px;color:#cbd5e1;border-radius:0}
+.tb .sp{flex:1}
+#filtro{margin:6px 0}
+#cuenta{font-size:13px;color:#9ca3af}
+#items{max-height:60vh;overflow-y:auto}
+.card{display:flex;align-items:stretch;border:1px solid #2d3748;border-radius:8px;overflow:hidden;background:#161d2b;margin:8px 0;min-height:64px}
+.mini{position:relative;width:100px;flex:none;background:#2b3648 center/cover no-repeat}
+.mini::after{content:'▶';position:absolute;inset:0;margin:auto;width:34px;height:34px;line-height:34px;text-align:center;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px}
+.card .t{flex:1;display:flex;align-items:center;padding:8px 10px;font-size:14px;color:#d1d5db}
+.card .acc{display:flex;flex-direction:column;justify-content:space-between;padding:4px 6px}
+.card .acc button{background:none;padding:4px 6px;font-size:18px;color:#cbd5e1}
 </style>
 </head>
 <body>
@@ -62,10 +72,10 @@ button{background:#2b3648;color:#fff}
     </div>
     <div id="aviso"></div>
     <div class="pests" id="pests">
-      <button class="on" data-p="pUsu">👥 Personas</button>
-      <button data-p="pChat">💬 Chat</button>
-      <button data-p="pLista">📋 Lista</button>
-      <button data-p="pHist">🕘 Historial</button>
+      <button class="on" data-p="pUsu">Personas</button>
+      <button data-p="pChat">Chat</button>
+      <button data-p="pLista">Lista de Reproducción</button>
+      <button data-p="pHist">Historial</button>
     </div>
     <div class="panel on" id="pUsu"><div class="tiles" id="tiles"></div></div>
     <div class="panel" id="pChat">
@@ -75,7 +85,19 @@ button{background:#2b3648;color:#fff}
         <button class="am" onclick="enviar()">Enviar</button>
       </div>
     </div>
-    <div class="panel" id="pLista"></div>
+    <div class="panel" id="pLista">
+      <div class="tb">
+        <button title="Reproducir todo" onclick="socket.emit('reproducir',0)">▶</button>
+        <button title="Mezclar" onclick="socket.emit('mezclar')">🔀</button>
+        <button title="Vaciar lista" onclick="vaciarLista()">🗑</button>
+        <span class="sp"></span>
+        <button title="Buscar en la lista" onclick="buscarLista()">🔍</button>
+        <button title="Siguiente" onclick="siguiente()">⏭</button>
+      </div>
+      <input id="filtro" placeholder="Buscar en la lista" hidden>
+      <div id="cuenta"></div>
+      <div id="items"></div>
+    </div>
     <div class="panel" id="pHist"></div>
   </div>
   <div class="barra">
@@ -94,7 +116,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 const socket = io();
 let yt, listo = false, ignorar = false, pendiente = null;
 let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
-let plActual = null, lastIdx = 0, avisoT;
+let plActual = null, lastIdx = 0, avisoT, listaActual = [];
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -264,18 +286,40 @@ function aplicar(e) {
 }
 socket.on('estado', aplicar);
 
-/* ---------- Lista e historial ---------- */
-socket.on('lista', (l) => {
-  if (!l.length) { $('pLista').innerHTML = '<p>Esta lista de reproducción no tiene contenido.</p>'; return; }
-  $('pLista').innerHTML =
-    `<div class="fila"><button class="am" onclick="socket.emit('reproducir',0)">▶ Reproducir todo</button><button onclick="socket.emit('mezclar')">🔀</button><button onclick="socket.emit('vaciar')">🗑</button></div><p style="font-size:13px">${l.length} videos</p>` +
-    l.map((v, i) =>
-      `<div class="item"><img src="https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg"><span>${esc(v.titulo)}</span><button class="am" onclick="socket.emit('reproducir',${i})">▶</button><button onclick="socket.emit('quitar',${i})">✕</button></div>`).join('');
-});
+/* ---------- Lista de reproducción (estilo Watch2Gether) ---------- */
+function renderLista() {
+  const f = $('filtro').value.trim().toLowerCase();
+  const l = listaActual;
+  $('cuenta').textContent = l.length ? l.length + ' videos' : '';
+  if (!l.length) { $('items').innerHTML = '<p>Esta lista de reproducción no tiene contenido.</p>'; return; }
+  const html = l.map((v, i) => ({ v, i }))
+    .filter(x => !f || x.v.titulo.toLowerCase().includes(f))
+    .map(({ v, i }) =>
+      `<div class="card"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('reproducir',${i})"></div><div class="t" onclick="socket.emit('reproducir',${i})">${esc(v.titulo)}</div><div class="acc"><button title="Editar título" onclick="editar(${i})">✎</button><button title="Quitar" onclick="socket.emit('quitar',${i})">✕</button></div></div>`).join('');
+  $('items').innerHTML = html || '<p>No hay resultados.</p>';
+}
+socket.on('lista', (l) => { listaActual = l; renderLista(); });
+$('filtro').addEventListener('input', renderLista);
+
+function buscarLista() {
+  const f = $('filtro');
+  f.hidden = !f.hidden;
+  if (f.hidden) { f.value = ''; renderLista(); } else f.focus();
+}
+function editar(i) {
+  const t = prompt('Nuevo título', listaActual[i] ? listaActual[i].titulo : '');
+  if (t && t.trim()) socket.emit('renombrar', { i, titulo: t.trim() });
+}
+function vaciarLista() {
+  if (confirm('¿Vaciar toda la lista?')) socket.emit('vaciar');
+}
+
 socket.on('historial', (l) => {
-  $('pHist').innerHTML = l.length ? l.map(v =>
-    `<div class="item"><span>${esc(v.titulo)}</span><button onclick="socket.emit('${v.pl ? 'cargarPl' : 'cargar'}','${esc(v.pl || v.id)}')">▶</button></div>`).join('')
-    : '<p>Aún no hay historial.</p>';
+  $('pHist').innerHTML = l.length ? l.map(v => {
+    const img = v.id ? `style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)"` : '';
+    const ev = `socket.emit('${v.pl ? 'cargarPl' : 'cargar'}','${esc(v.pl || v.id)}')`;
+    return `<div class="card"><div class="mini" ${img} onclick="${ev}"></div><div class="t" onclick="${ev}">${esc(v.titulo)}</div></div>`;
+  }).join('') : '<p>Aún no hay historial.</p>';
 });
 
 /* ---------- Chat ---------- */
