@@ -6,7 +6,6 @@ const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static(__dirname));
 
-const YT_API_KEY = process.env.YT_API_KEY || '';
 const salas = {};
 const okId = (x) => typeof x === 'string' && /^[\w-]{11}$/.test(x);
 
@@ -19,32 +18,55 @@ async function titulo(url, defecto) {
 }
 const tituloVideo = (id, def = id) => titulo('https://www.youtube.com/watch?v=' + id, def);
 
-async function leerPlaylistCompleta(playlistId) {
-  if (!YT_API_KEY || !playlistId) return null;
-  const items = [];
-  let pageToken = '';
-  for (let pagina = 0; pagina < 20; pagina++) {
-    const u = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
-    u.searchParams.set('part', 'snippet');
-    u.searchParams.set('playlistId', playlistId);
-    u.searchParams.set('maxResults', '50');
-    u.searchParams.set('key', YT_API_KEY);
-    if (pageToken) u.searchParams.set('pageToken', pageToken);
+/* ---------- Leer una playlist completa de YouTube ---------- */
+const CAB = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+  'Accept-Language': 'es-419,es;q=0.9',
+  'Cookie': 'CONSENT=YES+1; SOCS=CAI'
+};
 
-    const r = await fetch(u.toString());
-    if (!r.ok) break;
-    const j = await r.json();
-    for (const it of (j.items || [])) {
-      const vid = it?.snippet?.resourceId?.videoId;
-      const tit = it?.snippet?.title;
-      if (okId(vid) && tit && tit !== 'Private video' && tit !== 'Deleted video') {
-        items.push({ id: vid, titulo: String(tit).slice(0, 150) });
-      }
-    }
-    pageToken = j.nextPageToken || '';
-    if (!pageToken) break;
+function recoger(obj, out, cont) {
+  if (!obj || typeof obj !== 'object') return;
+  if (Array.isArray(obj)) { obj.forEach(x => recoger(x, out, cont)); return; }
+  if (obj.playlistVideoRenderer) {
+    const r = obj.playlistVideoRenderer;
+    const t = r.title && (r.title.runs ? r.title.runs.map(x => x.text).join('') : r.title.simpleText);
+    if (r.videoId && t && r.isPlayable !== false) out.push({ id: r.videoId, titulo: t });
   }
-  return items;
+  if (obj.continuationItemRenderer) {
+    const tk = obj.continuationItemRenderer.continuationEndpoint &&
+      obj.continuationItemRenderer.continuationEndpoint.continuationCommand &&
+      obj.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
+    if (tk) cont.push(tk);
+  }
+  for (const k in obj) if (obj[k] && typeof obj[k] === 'object') recoger(obj[k], out, cont);
+}
+
+async function leerPlaylist(pl) {
+  const r = await fetch('https://www.youtube.com/playlist?list=' + pl, { headers: CAB, signal: AbortSignal.timeout(15000) });
+  const html = await r.text();
+  const m = html.match(/ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s);
+  if (!m) return null;
+  const key = (html.match(/"INNERTUBE_API_KEY":"([^"]+)"/) || [])[1];
+  const ver = (html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/) || [])[1] || '2.20240101.00.00';
+  const out = [], cont = [];
+  recoger(JSON.parse(m[1]), out, cont);
+  let token = cont[0], vueltas = 0;
+  while (token && key && out.length < 500 && vueltas < 10) {
+    vueltas++;
+    const rr = await fetch('https://www.youtube.com/youtubei/v1/browse?key=' + key, {
+      method: 'POST',
+      headers: { ...CAB, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: ver, hl: 'es', gl: 'US' } }, continuation: token }),
+      signal: AbortSignal.timeout(15000)
+    });
+    const d = await rr.json();
+    const c2 = [];
+    recoger(d, out, c2);
+    token = c2[0];
+  }
+  const vistos = new Set();
+  return out.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 500);
 }
 
 const pos = (e) => e.t + (e.play ? (Date.now() - e.marca) / 1000 : 0);
@@ -129,23 +151,22 @@ io.on('connection', (socket) => {
     io.to(s).emit('aviso', 'Video añadido a la lista');
   });
 
-  socket.on('playlistApi', async (playlistId, cb) => {
+  socket.on('playlist', async (pl, cb) => {
     if (typeof cb !== 'function') return;
+    if (typeof pl !== 'string' || !/^[\w-]+$/.test(pl)) return cb(null);
     try {
-      const items = await leerPlaylistCompleta(String(playlistId || '').trim());
-      cb(items);
-    } catch (e) {
-      cb(null);
-    }
+      const l = await leerPlaylist(pl);
+      cb(l && l.length ? l : null);
+    } catch (e) { cb(null); }
   });
 
   socket.on('titulos', async (ids, cb) => {
     if (!Array.isArray(ids) || typeof cb !== 'function') return;
-    ids = [...new Set(ids)].filter(okId).slice(0, 1000);
+    ids = [...new Set(ids)].filter(okId).slice(0, 200);
     const out = [];
-    for (let i = 0; i < ids.length; i += 15) {
-      const r = await Promise.all(ids.slice(i, i + 15).map(async (id) => ({ id, titulo: await tituloVideo(id, id) })));
-      out.push(...r);
+    for (let i = 0; i < ids.length; i += 10) {
+      const r = await Promise.all(ids.slice(i, i + 10).map(async (id) => ({ id, titulo: await tituloVideo(id, null) })));
+      r.forEach(v => v.titulo && out.push(v));
     }
     cb(out);
   });
@@ -155,7 +176,7 @@ io.on('connection', (socket) => {
     if (!e || !Array.isArray(items)) return;
     const nuevos = items
       .filter(v => v && okId(v.id) && typeof v.titulo === 'string')
-      .slice(0, 1000)
+      .slice(0, 500)
       .map(v => ({ id: v.id, titulo: v.titulo.slice(0, 150) }));
     e.lista.push(...nuevos);
     envLista(io.to(s), e);
