@@ -6,45 +6,107 @@
 <title>Cine2Gether</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#111827;color:#e5e7eb;font-family:sans-serif}
+[hidden]{display:none!important}
+:root{--t:150px}
+html,body{margin:0;height:100%}
+body{background:#111827;color:#e5e7eb;font-family:sans-serif;overflow:hidden}
 button,input{font-size:16px;border:0;border-radius:8px;padding:12px;font-family:inherit}
 input{background:#1f2937;color:#fff;width:100%}
 button{background:#2b3648;color:#fff}
 .am{background:#fbbf24;color:#000;font-weight:bold}
+.gris{color:#9ca3af}
 .caja{padding:14px;max-width:700px;margin:auto}
 .logo{font-size:26px;font-weight:bold}.logo b{color:#fbbf24}
 .salaItem{background:#1f2937;border-radius:10px;padding:16px;margin:8px 0}
-#player{width:100%;aspect-ratio:16/9;background:#000}
-#tit{padding:8px 14px;font-weight:bold;font-size:14px}
-#aviso{font-size:13px;color:#fbbf24;min-height:16px}
-.fila{display:flex;gap:6px;margin:6px 0}
-.pests{display:flex;gap:4px;overflow-x:auto;border-bottom:2px solid #1f2937}
-.pests button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap;font-size:15px}
-.pests button.on{color:#fff;border-bottom:3px solid #fbbf24}
-.panel{display:none;padding:8px 0;min-height:200px}
-.panel.on{display:block}
-.tiles{display:flex;flex-wrap:wrap;gap:8px}
-.tile{position:relative;width:150px;height:150px;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#1e3a8a,#6b21a8)}
-.tile .av{font-size:80px;text-align:center;margin-top:15px;opacity:.6}
+#lobby{height:100%;overflow-y:auto}
+
+/* Sala */
+#sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto}
+#vbox{width:100%;aspect-ratio:16/9;background:#000;flex:none}
+#vbox.mini{position:fixed;right:8px;bottom:8px;width:55%;max-width:320px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #000a}
+#ctl{display:flex;align-items:center;gap:6px;background:#0b0f19;padding:2px 8px;flex:none}
+#ctl button{background:none;padding:8px;font-size:18px}
+#tiempo{font-size:14px;min-width:46px}
+#seek{flex:1;padding:0;accent-color:#fbbf24;background:none;height:24px}
+#tb{display:flex;align-items:center;gap:2px;padding:4px 10px;flex:none}
+#tb .sp{flex:1}
+#tb button{background:none;padding:8px 10px;font-size:19px}
+#salaNombre{font-size:17px}
+#pages{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+#pages::-webkit-scrollbar{display:none}
+.pg{flex:0 0 100%;min-width:0;display:flex;flex-direction:column;overflow-y:auto;scroll-snap-align:start;padding:6px 12px}
+#dots{display:flex;justify-content:center;gap:10px;padding:8px;flex:none}
+#dots i{width:9px;height:9px;border-radius:50%;background:#4b5563;display:block}
+#dots i.on{background:#fff}
+
+/* Personas */
+#tiles{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.tile{position:relative;width:var(--t);height:var(--t);border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#1e3a8a,#6b21a8)}
+.tile .av{font-size:calc(var(--t)*.55);text-align:center;margin-top:calc(var(--t)*.1);opacity:.6}
 .tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
 .tile .nom{position:absolute;bottom:0;left:0;right:0;background:#15803d;text-align:center;padding:3px}
 .tile .rey{position:absolute;top:6px;left:6px;font-size:20px;z-index:2}
-#chat{height:220px;overflow:auto;background:#1f2937;border-radius:8px;padding:8px}
-.barra{position:sticky;bottom:0;background:#111827;display:flex;gap:6px;padding:8px 14px;justify-content:center}
+.acciones{position:sticky;bottom:0;margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:6px;background:#111827;padding:8px 0}
+.grupo{display:flex;background:#1f2937;border-radius:8px}
+.grupo button{background:none;padding:10px 14px}
 
-/* Lista de reproducción estilo Watch2Gether */
-.tb{display:flex;align-items:center;gap:2px;border-bottom:2px solid #1f2937;margin-bottom:6px}
+/* Chat */
+#chat{flex:1;overflow-y:auto}
+.msg{background:#1f2937;border-radius:10px;padding:8px 10px;margin:6px 0;font-size:14px}
+.msg small{color:#9ca3af;float:right;margin-left:8px;font-size:11px}
+.msg b{color:#fbbf24}
+.vid{display:flex;gap:8px;align-items:flex-start}
+.vid .yt{background:#ff0033;color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none}
+.vid a{color:#93c5fd;font-size:13px}
+.vid small{margin-left:auto}
+.cin{display:flex;gap:6px;padding-top:6px;flex:none}
+.cin button{padding:10px 14px}
+#emojis{display:flex;flex-wrap:wrap;gap:4px;background:#1f2937;border-radius:8px;padding:6px;margin-top:6px;flex:none}
+#emojis button{background:none;padding:6px;font-size:22px}
+
+/* Lista de reproducción */
+.stabs{display:flex;gap:4px;border-bottom:2px solid #1f2937;flex:none}
+.stabs button{background:none;border-radius:0;color:#9ca3af;font-size:15px}
+.stabs button.on{color:#fff;border-bottom:3px solid #fbbf24}
+.sub{display:none;flex:1;min-height:0;flex-direction:column}
+.sub.on{display:flex}
+#pHist{overflow-y:auto}
+.tb{display:flex;align-items:center;gap:2px;border-bottom:2px solid #1f2937;margin:6px 0}
 .tb button{background:none;padding:8px 12px;font-size:20px;color:#cbd5e1;border-radius:0}
 .tb .sp{flex:1}
 #filtro{margin:6px 0}
 #cuenta{font-size:13px;color:#9ca3af}
-#items{max-height:60vh;overflow-y:auto}
+#items{flex:1;overflow-y:auto;position:relative}
 .card{display:flex;align-items:stretch;border:1px solid #2d3748;border-radius:8px;overflow:hidden;background:#161d2b;margin:8px 0;min-height:64px}
+.card.act{border-color:#fbbf24}
+.card.act .t{text-decoration:underline}
 .mini{position:relative;width:100px;flex:none;background:#2b3648 center/cover no-repeat}
 .mini::after{content:'▶';position:absolute;inset:0;margin:auto;width:34px;height:34px;line-height:34px;text-align:center;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px}
 .card .t{flex:1;display:flex;align-items:center;padding:8px 10px;font-size:14px;color:#d1d5db}
 .card .acc{display:flex;flex-direction:column;justify-content:space-between;padding:4px 6px}
 .card .acc button{background:none;padding:4px 6px;font-size:18px;color:#cbd5e1}
+
+/* Buscador */
+#buscador{position:fixed;inset:0;background:#111827;z-index:50;overflow-y:auto;padding:10px;max-width:700px;margin:auto}
+.bfila{display:flex;gap:6px}
+.bcaja{flex:1;display:flex;align-items:center;background:#1f2937;border:1px solid #2d3748;border-radius:8px;padding-left:8px;min-width:0}
+.bcaja input{background:none;padding:12px 6px}
+.bcaja button{background:none;padding:10px}
+.bic{background:#4b5563;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:12px;flex:none}
+.bic.yt{background:#ff0033;border-radius:6px;width:34px}
+.bbtn{padding:10px 14px}
+.btabs{display:flex;gap:2px;overflow-x:auto;border-bottom:2px solid #1f2937;margin:10px 0}
+.btabs button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap;font-size:15px;padding:10px}
+.btabs button.on{color:#fff;border-bottom:3px solid #fbbf24}
+.bpan{display:none}.bpan.on{display:block}
+.imp{text-align:center;margin:8px 0}
+.imp button{width:85%}
+.res{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #1f2937}
+.res .mini{width:110px;height:68px;border-radius:8px}
+.rt{flex:1;font-size:14px}
+.rt button{display:block;font-size:12px;padding:6px 10px;margin-top:6px}
+.spin{text-align:center;padding:30px;font-size:28px}
+#toast{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#374151;color:#fff;padding:10px 16px;border-radius:10px;z-index:100;font-size:14px;max-width:90%}
 </style>
 </head>
 <body>
@@ -53,7 +115,7 @@ button{background:#2b3648;color:#fff}
   <div class="logo">Cine<b>2Gether</b></div>
   <input id="nombre" placeholder="Tu nombre" style="margin:14px 0">
   <h2>Mis Salas</h2>
-  <div class="fila">
+  <div style="display:flex;gap:6px;margin:6px 0">
     <input id="codigo" placeholder="Código de sala (vacío = nueva)">
     <button class="am" onclick="entrar()">Entrar</button>
   </div>
@@ -61,52 +123,96 @@ button{background:#2b3648;color:#fff}
 </div>
 
 <div id="sala" hidden>
-  <div id="player"></div>
-  <div id="tit">Sin video</div>
-  <div class="caja" style="padding-top:0">
-    <div class="fila">
-      <input id="enlace" placeholder="Pega un enlace o playlist de YouTube">
-      <button class="am" onclick="cargar()">▶</button>
-      <button onclick="agregar()">➕</button>
-      <button onclick="siguiente()">⏭</button>
+  <div id="vbox"><div id="player"></div></div>
+  <div id="ctl">
+    <button id="bPlay" onclick="playPausa()">▶</button>
+    <span id="tiempo">00:00</span>
+    <input type="range" id="seek" min="0" max="100" step="0.1" value="0">
+    <button onclick="velocidad()">⚙</button>
+    <button id="bVol" onclick="volumen()">🔊</button>
+  </div>
+  <div id="tb">
+    <span id="salaNombre"></span><span class="sp"></span>
+    <button onclick="abrirBuscador()">🔍</button>
+    <button onclick="ajustes()">⚙</button>
+  </div>
+
+  <div id="pages">
+    <!-- Pantalla 1: Personas -->
+    <div class="pg">
+      <div id="tiles"></div>
+      <div class="acciones">
+        <button onclick="salir()">🚪</button>
+        <button class="am" onclick="invitar(this)">👤+ Invitar</button>
+        <div class="grupo">
+          <button id="bCam" onclick="camaraOnOff()">📹</button>
+          <button id="bMic" onclick="micOnOff()">🎤</button>
+        </div>
+        <div class="grupo">
+          <button onclick="zoomTiles(-1)">−</button>
+          <button onclick="zoomTiles(1)">+</button>
+        </div>
+      </div>
     </div>
-    <div id="aviso"></div>
-    <div class="pests" id="pests">
-      <button class="on" data-p="pUsu">Personas</button>
-      <button data-p="pChat">Chat</button>
-      <button data-p="pLista">Lista de Reproducción</button>
-      <button data-p="pHist">Historial</button>
-    </div>
-    <div class="panel on" id="pUsu"><div class="tiles" id="tiles"></div></div>
-    <div class="panel" id="pChat">
+
+    <!-- Pantalla 2: Chat -->
+    <div class="pg">
       <div id="chat"></div>
-      <div class="fila">
+      <div id="emojis" hidden></div>
+      <div class="cin">
+        <button id="bEmo">😊</button>
         <input id="msg" placeholder="Escribe un mensaje">
-        <button class="am" onclick="enviar()">Enviar</button>
+        <button class="am" onclick="enviar()">➤</button>
       </div>
     </div>
-    <div class="panel" id="pLista">
-      <div class="tb">
-        <button title="Reproducir todo" onclick="socket.emit('reproducir',0)">▶</button>
-        <button title="Mezclar" onclick="socket.emit('mezclar')">🔀</button>
-        <button title="Vaciar lista" onclick="vaciarLista()">🗑</button>
-        <span class="sp"></span>
-        <button title="Buscar en la lista" onclick="buscarLista()">🔍</button>
-        <button title="Siguiente" onclick="siguiente()">⏭</button>
+
+    <!-- Pantalla 3: Listas de Reproducción / Historial -->
+    <div class="pg">
+      <div class="stabs">
+        <button class="on" data-s="pLista">Listas de Reproducción</button>
+        <button data-s="pHist">Historial</button>
       </div>
-      <input id="filtro" placeholder="Buscar en la lista" hidden>
-      <div id="cuenta"></div>
-      <div id="items"></div>
+      <div class="sub on" id="pLista">
+        <div class="tb">
+          <button title="Reproducir todo" onclick="socket.emit('reproducir',0)">▶</button>
+          <button title="Mezclar" onclick="socket.emit('mezclar')">🔀</button>
+          <button title="Vaciar lista" onclick="vaciarLista()">🗑</button>
+          <span class="sp"></span>
+          <button title="Buscar en la lista" onclick="buscarLista()">🔍</button>
+          <button title="Siguiente" onclick="socket.emit('siguiente')">⏭</button>
+        </div>
+        <input id="filtro" placeholder="Buscar en la lista" hidden>
+        <div id="cuenta"></div>
+        <div id="items"></div>
+      </div>
+      <div class="sub" id="pHist"></div>
     </div>
-    <div class="panel" id="pHist"></div>
   </div>
-  <div class="barra">
-    <button onclick="salir()">🚪</button>
-    <button class="am" onclick="invitar(this)">👤+ Invitar</button>
-    <button id="bCam" onclick="camaraOnOff()">📷</button>
-    <button id="bMic" onclick="micOnOff()">🎤</button>
-  </div>
+  <div id="dots"><i class="on" onclick="irPag(0)"></i><i onclick="irPag(1)"></i><i onclick="irPag(2)"></i></div>
 </div>
+
+<!-- Buscador -->
+<div id="buscador" hidden>
+  <div class="bfila">
+    <div class="bcaja">
+      <span id="bic" class="bic">▶</span>
+      <input id="bin" placeholder="Busca o pega un enlace" autocomplete="off">
+      <button id="bclear">✕</button>
+    </div>
+    <button class="bbtn" onclick="buscar()">🔍</button>
+    <button class="bbtn" onclick="cerrarBuscador()">✕</button>
+  </div>
+  <div class="btabs" id="btabs">
+    <button class="on" data-b="bCont">🔍 Contenido</button>
+    <button data-b="bApps">▦ Aplicaciones</button>
+    <button data-b="bPant">🖥 Compartir pantalla</button>
+  </div>
+  <div class="bpan on" id="bCont"><p class="gris">Pega un enlace de YouTube (video o playlist) y toca 🔍.</p></div>
+  <div class="bpan" id="bApps"><p class="gris">Las aplicaciones todavía no están disponibles.</p></div>
+  <div class="bpan" id="bPant"><p class="gris">Compartir pantalla todavía no está disponible.</p></div>
+</div>
+
+<div id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -116,16 +222,19 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 const socket = io();
 let yt, listo = false, ignorar = false, pendiente = null;
 let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
-let plActual = null, lastIdx = 0, avisoT, listaActual = [];
+let listaActual = [], posActual = -1, resultados = [], resEsLista = false;
+let importando = false, arrastrando = false, zoom = 150, tToast, velIdx = 0;
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 function aviso(t) {
-  $('aviso').textContent = t;
-  clearTimeout(avisoT);
-  avisoT = setTimeout(() => $('aviso').textContent = '', 7000);
+  const x = $('toast');
+  x.textContent = t; x.style.display = 'block';
+  clearTimeout(tToast);
+  tToast = setTimeout(() => x.style.display = 'none', 3500);
 }
 socket.on('aviso', aviso);
+const hora = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /* ---------- Salas guardadas ---------- */
 function guardadas() { try { return JSON.parse(localStorage.getItem('salas') || '[]'); } catch (e) { return []; } }
@@ -140,8 +249,8 @@ function mostrarSalas() {
     `<div class="salaItem" onclick="entrar('${c}')">🕘 Sala ${esc(c)} ›</div>`).join('');
 }
 try { $('nombre').value = localStorage.getItem('nombre') || ''; } catch (e) {}
-const p = new URLSearchParams(location.search);
-if (p.get('sala')) $('codigo').value = p.get('sala');
+const prm = new URLSearchParams(location.search);
+if (prm.get('sala')) $('codigo').value = prm.get('sala');
 mostrarSalas();
 
 function entrar(c) {
@@ -152,6 +261,7 @@ function entrar(c) {
   guardar(sala);
   $('lobby').hidden = true;
   $('sala').hidden = false;
+  $('salaNombre').textContent = 'Sala ' + sala;
   crearPlayer();
   socket.emit('entrar', { sala, nombre });
 }
@@ -161,36 +271,43 @@ function invitar(b) {
   b.textContent = '¡Copiado!';
   setTimeout(() => b.textContent = '👤+ Invitar', 1500);
 }
+function ajustes() {
+  const n = prompt('Tu nombre en la sala', nombre);
+  if (n && n.trim()) {
+    nombre = n.trim().slice(0, 20);
+    try { localStorage.setItem('nombre', nombre); } catch (e) {}
+    socket.emit('nombre', nombre);
+  }
+}
 socket.on('connect', () => { miId = socket.id; if (sala) socket.emit('entrar', { sala, nombre }); });
 
-/* ---------- Pestañas ---------- */
-$('pests').onclick = (e) => {
-  const t = e.target.dataset.p; if (!t) return;
-  document.querySelectorAll('.pests button,.panel').forEach(x => x.classList.remove('on'));
-  e.target.classList.add('on'); $(t).classList.add('on');
-};
+/* ---------- Pantallas deslizables ---------- */
+const pgs = $('pages');
+pgs.addEventListener('scroll', () => {
+  const i = Math.round(pgs.scrollLeft / pgs.clientWidth);
+  document.querySelectorAll('#dots i').forEach((d, k) => d.classList.toggle('on', k === i));
+});
+function irPag(i) { pgs.scrollTo({ left: i * pgs.clientWidth, behavior: 'smooth' }); }
 
-/* ---------- Reproductor YouTube ---------- */
+document.querySelectorAll('.stabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.stabs button,.sub').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); $(b.dataset.s).classList.add('on');
+  if (b.dataset.s === 'pLista') renderLista();
+});
+
+/* ---------- Reproductor YouTube + barra de control ---------- */
 function crearPlayer() {
   if (yt || !window.YT || !YT.Player || $('sala').hidden) return;
   yt = new YT.Player('player', {
-    width: '100%', height: '100%', playerVars: { playsinline: 1 },
+    width: '100%', height: '100%',
+    playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, disablekb: 1 },
     events: {
       onReady: () => { listo = true; if (pendiente) aplicar(pendiente); },
-      onError: () => {
-        if (plActual) yt.nextVideo();
-        else { aviso('Video no disponible aquí, saltando…'); socket.emit('fin', yt.getVideoData().video_id); }
-      },
+      onError: () => { aviso('Video no disponible aquí, saltando…'); socket.emit('fin', yt.getVideoData().video_id); },
       onStateChange: (e) => {
         if (ignorar) return;
         if (e.data === 0) { socket.emit('fin', yt.getVideoData().video_id); return; }
-        if (e.data === 1 || e.data === 2) {
-          const idx = plActual ? yt.getPlaylistIndex() : undefined;
-          if (plActual && e.data === 1 && idx !== lastIdx) {
-            lastIdx = idx; socket.emit('indice', idx); return;
-          }
-          socket.emit('control', { play: e.data === 1, t: yt.getCurrentTime(), idx });
-        }
+        if (e.data === 1 || e.data === 2) socket.emit('control', { play: e.data === 1, t: yt.getCurrentTime() });
       }
     }
   });
@@ -201,106 +318,138 @@ function idDe(url) {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
   return m ? m[1] : null;
 }
-function leerEnlace() {
-  const url = $('enlace').value;
-  let pl = (url.match(/[?&]list=([\w-]+)/) || [])[1];
-  const id = idDe(url);
-  if (pl && /^RD/.test(pl) && id) pl = undefined;
-  if (!pl && !id) { alert('Enlace de YouTube no válido'); return null; }
-  $('enlace').value = '';
-  return { pl, id };
-}
-function cargar() {
-  const r = leerEnlace(); if (!r) return;
-  r.pl ? socket.emit('cargarPl', r.pl) : socket.emit('cargar', r.id);
-}
-function agregar() {
-  const r = leerEnlace(); if (!r) return;
-  r.pl ? importar(r.pl) : socket.emit('agregar', r.id);
-}
-function siguiente() {
-  if (!listo) return;
-  if (plActual) yt.nextVideo();
-  else socket.emit('fin', yt.getVideoData().video_id);
-}
-
-/* ---------- Importar playlist a la lista de la sala ---------- */
-function importar(pl) {
-  if (!window.YT || !YT.Player) return aviso('Espera un momento y vuelve a intentar.');
-  aviso('Leyendo la playlist… (unos segundos)');
-  const caja = document.createElement('div');
-  caja.style.cssText = 'position:fixed;left:-9999px;top:0;width:220px;height:220px';
-  const hijo = document.createElement('div');
-  caja.appendChild(hijo);
-  document.body.appendChild(caja);
-  const tmp = new YT.Player(hijo, {
-    width: 220, height: 220,
-    events: { onReady: () => tmp.cuePlaylist({ listType: 'playlist', list: pl }) }
-  });
-  const limpiar = () => { try { tmp.destroy(); } catch (e) {} caja.remove(); };
-  let n = 0;
-  const t = setInterval(() => {
-    n++;
-    let ids = null;
-    try { ids = tmp.getPlaylist && tmp.getPlaylist(); } catch (e) {}
-    if (ids && ids.length) {
-      clearInterval(t); limpiar();
-      socket.emit('importar', ids);
-    } else if (n > 30) {
-      clearInterval(t); limpiar();
-      aviso('No se pudo leer la playlist. ¿Es pública?');
-    }
-  }, 500);
-}
 
 function aplicar(e) {
   if (!listo) { pendiente = e; return; }
-  if (!e.id && !e.pl) return;
-  $('tit').textContent = e.titulo || '';
+  if (!e.id) return;
   ignorar = true;
-  if (e.pl) {
-    lastIdx = e.idx;
-    if (plActual !== e.pl) {
-      plActual = e.pl;
-      yt.loadPlaylist({ listType: 'playlist', list: e.pl, index: e.idx, startSeconds: e.t });
-      if (!e.play) setTimeout(() => yt.pauseVideo(), 1500);
-    } else if (yt.getPlaylistIndex() !== e.idx) {
-      yt.playVideoAt(e.idx);
-      if (!e.play) setTimeout(() => yt.pauseVideo(), 1500);
-    } else {
-      if (Math.abs(yt.getCurrentTime() - e.t) > 1.5) yt.seekTo(e.t, true);
-      e.play ? yt.playVideo() : yt.pauseVideo();
-    }
+  const actual = yt.getVideoData && yt.getVideoData().video_id;
+  if (actual !== e.id) {
+    yt.loadVideoById(e.id, e.t);
+    if (!e.play) setTimeout(() => yt.pauseVideo(), 500);
   } else {
-    plActual = null;
-    const actual = yt.getVideoData && yt.getVideoData().video_id;
-    if (actual !== e.id) {
-      yt.loadVideoById(e.id, e.t);
-      if (!e.play) setTimeout(() => yt.pauseVideo(), 500);
-    } else {
-      if (Math.abs(yt.getCurrentTime() - e.t) > 1.5) yt.seekTo(e.t, true);
-      e.play ? yt.playVideo() : yt.pauseVideo();
-    }
+    if (Math.abs(yt.getCurrentTime() - e.t) > 1.5) yt.seekTo(e.t, true);
+    e.play ? yt.playVideo() : yt.pauseVideo();
   }
   setTimeout(() => ignorar = false, 1500);
 }
 socket.on('estado', aplicar);
 
-/* ---------- Lista de reproducción (estilo Watch2Gether) ---------- */
+const fmt = (s) => { s = Math.floor(s || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+setInterval(() => {
+  if (!listo || !yt.getPlayerState) return;
+  const d = yt.getDuration() || 0, c = yt.getCurrentTime() || 0;
+  if (!arrastrando) { $('seek').max = d || 100; $('seek').value = c; $('tiempo').textContent = fmt(c); }
+  $('bPlay').textContent = yt.getPlayerState() === 1 ? '⏸' : '▶';
+}, 500);
+$('seek').addEventListener('input', () => { arrastrando = true; $('tiempo').textContent = fmt(+$('seek').value); });
+$('seek').addEventListener('change', () => {
+  if (listo) {
+    const st = yt.getPlayerState();
+    yt.seekTo(+$('seek').value, true);
+    socket.emit('control', { play: st === 1 || st === 3, t: +$('seek').value });
+  }
+  arrastrando = false;
+});
+function playPausa() { if (!listo) return; yt.getPlayerState() === 1 ? yt.pauseVideo() : yt.playVideo(); }
+function velocidad() {
+  if (!listo) return;
+  const v = [1, 1.25, 1.5, 2, 0.75];
+  velIdx = (velIdx + 1) % v.length;
+  yt.setPlaybackRate(v[velIdx]);
+  aviso('Velocidad ' + v[velIdx] + 'x (solo para ti)');
+}
+function volumen() {
+  if (!listo) return;
+  if (yt.isMuted()) { yt.unMute(); $('bVol').textContent = '🔊'; }
+  else { yt.mute(); $('bVol').textContent = '🔇'; }
+}
+
+/* ---------- Buscador (Contenido / Aplicaciones / Compartir pantalla) ---------- */
+function abrirBuscador() { $('buscador').hidden = false; $('vbox').classList.add('mini'); $('bin').focus(); }
+function cerrarBuscador() { $('buscador').hidden = true; $('vbox').classList.remove('mini'); }
+$('bin').addEventListener('input', () => $('bic').classList.toggle('yt', /youtu/.test($('bin').value)));
+$('bin').addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
+$('bclear').onclick = () => { $('bin').value = ''; $('bic').classList.remove('yt'); $('bin').focus(); };
+$('btabs').onclick = (e) => {
+  const t = e.target.dataset.b; if (!t) return;
+  document.querySelectorAll('.btabs button,.bpan').forEach(x => x.classList.remove('on'));
+  e.target.classList.add('on'); $(t).classList.add('on');
+};
+
+function obtenerIds(pl) {
+  return new Promise((ok) => {
+    if (!window.YT || !YT.Player) return ok(null);
+    const caja = document.createElement('div');
+    caja.style.cssText = 'position:fixed;left:-9999px;top:0;width:220px;height:220px';
+    const hijo = document.createElement('div');
+    caja.appendChild(hijo); document.body.appendChild(caja);
+    const tmp = new YT.Player(hijo, {
+      width: 220, height: 220,
+      events: { onReady: () => tmp.cuePlaylist({ listType: 'playlist', list: pl }) }
+    });
+    let n = 0;
+    const t = setInterval(() => {
+      n++;
+      let ids = null;
+      try { ids = tmp.getPlaylist && tmp.getPlaylist(); } catch (e) {}
+      if ((ids && ids.length) || n > 30) {
+        clearInterval(t);
+        try { tmp.destroy(); } catch (e) {}
+        caja.remove();
+        ok(ids && ids.length ? ids : null);
+      }
+    }, 500);
+  });
+}
+
+async function buscar() {
+  const url = $('bin').value.trim();
+  const pl = (url.match(/[?&]list=([\w-]+)/) || [])[1];
+  const id = idDe(url);
+  resEsLista = !!pl && !(/^RD/.test(pl) && id);
+  if (!resEsLista && !id) {
+    resultados = [];
+    $('bCont').innerHTML = '<p class="gris">Pega un enlace de YouTube (video o playlist) y toca 🔍. La búsqueda por texto no está disponible.</p>';
+    return;
+  }
+  $('bCont').innerHTML = '<div class="spin">⏳</div>';
+  const ids = resEsLista ? await obtenerIds(pl) : [id];
+  if (!ids) { $('bCont').innerHTML = '<p class="gris">No se pudo leer la playlist. ¿Es pública?</p>'; return; }
+  socket.emit('titulos', ids, (res) => { resultados = res; pintarResultados(); });
+}
+function pintarResultados() {
+  if (!resultados.length) { $('bCont').innerHTML = '<p class="gris">No se encontró nada (¿video privado o borrado?).</p>'; return; }
+  const boton = resEsLista
+    ? `<div class="imp"><button onclick="importarTodo()" ${importando ? 'disabled' : ''}>${importando ? '⏳' : '＋'} Importar Lista de Reproducción</button></div>` : '';
+  $('bCont').innerHTML = boton + resultados.map((v, i) =>
+    `<div class="res"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('cargar','${esc(v.id)}')"></div><div class="rt"><div>${esc(v.titulo)}</div><button onclick="anadir(${i})">＋ Añadir a Lista de Reproducción</button><button onclick="sugerir(${i})">› Sugerir</button></div></div>`).join('');
+}
+function importarTodo() {
+  if (importando) return;
+  importando = true; pintarResultados();
+  socket.emit('importar', resultados, () => { importando = false; pintarResultados(); });
+}
+function anadir(i) { socket.emit('agregar', resultados[i].id); }
+function sugerir(i) { socket.emit('sugerir', resultados[i]); aviso('Sugerencia enviada al chat'); }
+
+/* ---------- Lista de reproducción ---------- */
 function renderLista() {
   const f = $('filtro').value.trim().toLowerCase();
-  const l = listaActual;
-  $('cuenta').textContent = l.length ? l.length + ' videos' : '';
-  if (!l.length) { $('items').innerHTML = '<p>Esta lista de reproducción no tiene contenido.</p>'; return; }
-  const html = l.map((v, i) => ({ v, i }))
+  $('cuenta').textContent = listaActual.length ? listaActual.length + ' videos' : '';
+  if (!listaActual.length) { $('items').innerHTML = '<p class="gris">Esta lista de reproducción no tiene contenido.</p>'; return; }
+  const html = listaActual.map((v, i) => ({ v, i }))
     .filter(x => !f || x.v.titulo.toLowerCase().includes(f))
     .map(({ v, i }) =>
-      `<div class="card"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('reproducir',${i})"></div><div class="t" onclick="socket.emit('reproducir',${i})">${esc(v.titulo)}</div><div class="acc"><button title="Editar título" onclick="editar(${i})">✎</button><button title="Quitar" onclick="socket.emit('quitar',${i})">✕</button></div></div>`).join('');
-  $('items').innerHTML = html || '<p>No hay resultados.</p>';
+      `<div class="card${i === posActual ? ' act' : ''}"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('reproducir',${i})"></div><div class="t" onclick="socket.emit('reproducir',${i})">${esc(v.titulo)}</div><div class="acc"><button title="Editar título" onclick="editar(${i})">✎</button><button title="Quitar" onclick="socket.emit('quitar',${i})">✕</button></div></div>`).join('');
+  $('items').innerHTML = html || '<p class="gris">No hay resultados.</p>';
+  if (!f) {
+    const a = $('items').querySelector('.act');
+    if (a) $('items').scrollTo({ top: a.offsetTop - 4, behavior: 'smooth' });
+  }
 }
-socket.on('lista', (l) => { listaActual = l; renderLista(); });
+socket.on('lista', (d) => { listaActual = d.items; posActual = d.pos; renderLista(); });
 $('filtro').addEventListener('input', renderLista);
-
 function buscarLista() {
   const f = $('filtro');
   f.hidden = !f.hidden;
@@ -310,32 +459,52 @@ function editar(i) {
   const t = prompt('Nuevo título', listaActual[i] ? listaActual[i].titulo : '');
   if (t && t.trim()) socket.emit('renombrar', { i, titulo: t.trim() });
 }
-function vaciarLista() {
-  if (confirm('¿Vaciar toda la lista?')) socket.emit('vaciar');
-}
+function vaciarLista() { if (confirm('¿Vaciar toda la lista?')) socket.emit('vaciar'); }
 
 socket.on('historial', (l) => {
-  $('pHist').innerHTML = l.length ? l.map(v => {
-    const img = v.id ? `style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)"` : '';
-    const ev = `socket.emit('${v.pl ? 'cargarPl' : 'cargar'}','${esc(v.pl || v.id)}')`;
-    return `<div class="card"><div class="mini" ${img} onclick="${ev}"></div><div class="t" onclick="${ev}">${esc(v.titulo)}</div></div>`;
-  }).join('') : '<p>Aún no hay historial.</p>';
+  $('pHist').innerHTML = l.length ? l.map(v =>
+    `<div class="card"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('cargar','${esc(v.id)}')"></div><div class="t" onclick="socket.emit('cargar','${esc(v.id)}')">${esc(v.titulo)}</div><div class="acc"><button title="Añadir a la lista" onclick="socket.emit('agregar','${esc(v.id)}')">＋</button></div></div>`).join('')
+    : '<p class="gris">Aún no hay historial.</p>';
 });
 
 /* ---------- Chat ---------- */
+function ponerMsg(d) {
+  const c = $('chat');
+  c.appendChild(d);
+  while (c.children.length > 200) c.removeChild(c.firstChild);
+  c.scrollTop = c.scrollHeight;
+}
 function enviar() {
   const i = $('msg');
   if (i.value.trim()) socket.emit('chat', i.value);
   i.value = '';
 }
 $('msg').addEventListener('keydown', (e) => { if (e.key === 'Enter') enviar(); });
-socket.on('chat', ({ nombre, texto }) => {
-  const c = $('chat'), d = document.createElement('div');
-  d.textContent = nombre + ': ' + texto;
-  c.appendChild(d); c.scrollTop = c.scrollHeight;
+socket.on('chat', (m) => {
+  const d = document.createElement('div');
+  d.className = 'msg';
+  d.innerHTML = `<b>${esc(m.nombre)}</b> ${esc(m.texto)} <small>${hora()}</small>`;
+  ponerMsg(d);
 });
+socket.on('chatVideo', (v) => {
+  const d = document.createElement('div');
+  d.className = 'msg vid';
+  d.innerHTML = `<span class="yt">▶</span><div><div>${v.nombre ? '<b>' + esc(v.nombre) + '</b> sugiere: ' : ''}<i>${esc(v.titulo)}</i></div><a href="#" onclick="socket.emit('cargar','${esc(v.id)}');return false">Reproducir</a> | <a href="#" onclick="socket.emit('agregar','${esc(v.id)}');return false">Añadir a la lista</a></div><small>${hora()}</small>`;
+  ponerMsg(d);
+});
+['😀','😂','😍','😮','😢','😡','👍','👏','🔥','❤️','🎉','🍿','🎬','😎','🤩','😱','🙌','💀','🥹','🤔'].forEach(e => {
+  const b = document.createElement('button');
+  b.textContent = e;
+  b.onclick = () => { $('msg').value += e; $('msg').focus(); };
+  $('emojis').appendChild(b);
+});
+$('bEmo').onclick = () => { $('emojis').hidden = !$('emojis').hidden; };
 
 /* ---------- Personas ---------- */
+function zoomTiles(d) {
+  zoom = Math.min(260, Math.max(90, zoom + d * 30));
+  document.documentElement.style.setProperty('--t', zoom + 'px');
+}
 function pintarUsuarios() {
   $('tiles').innerHTML = usuarios.map(u =>
     `<div class="tile"><div class="av">👤</div><video id="v-${u.id}" autoplay playsinline></video>${u.host ? '<span class="rey">👑</span>' : ''}<div class="nom">${esc(u.nombre)}</div></div>`).join('');
@@ -396,18 +565,18 @@ async function camaraOnOff() {
     camara.getTracks().forEach(t => t.stop());
     camara = null; delete streams[miId];
     for (const id in sal) { sal[id].close(); delete sal[id]; socket.emit('senal', { para: id, tipo: 'apagado' }); }
-    $('bCam').textContent = '📷'; pintarUsuarios(); return;
+    $('bCam').textContent = '📹'; pintarUsuarios(); return;
   }
   try {
     camara = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
   } catch (e) { alert('No se pudo abrir la cámara. Revisa los permisos.'); return; }
   streams[miId] = camara;
-  $('bCam').textContent = '📷 ON';
+  $('bCam').textContent = '📹 ON';
   pintarUsuarios();
   usuarios.forEach(u => u.id !== miId && enviarA(u.id));
 }
 function micOnOff() {
-  if (!camara) return alert('Primero enciende la cámara 📷');
+  if (!camara) return alert('Primero enciende la cámara 📹');
   const t = camara.getAudioTracks()[0]; if (!t) return;
   t.enabled = !t.enabled;
   $('bMic').textContent = t.enabled ? '🎤' : '🔇';
