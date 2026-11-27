@@ -90,6 +90,13 @@ io.on('connection', (socket) => {
     io.to(s).emit('aviso', 'Listo: ' + nuevos.length + ' videos añadidos.');
   });
 
+  socket.on('renombrar', ({ i, titulo }) => {
+    const s = socket.data.sala, e = salas[s];
+    if (!e || !e.lista[i] || typeof titulo !== 'string') return;
+    e.lista[i].titulo = titulo.trim().slice(0, 150) || e.lista[i].titulo;
+    io.to(s).emit('lista', e.lista);
+  });
+
   socket.on('mezclar', () => {
     const s = socket.data.sala, e = salas[s]; if (!e) return;
     for (let i = e.lista.length - 1; i > 0; i--) {
