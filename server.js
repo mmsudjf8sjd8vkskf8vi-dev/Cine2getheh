@@ -52,7 +52,7 @@ async function leerPlaylist(pl) {
   const out = [], cont = [];
   recoger(JSON.parse(m[1]), out, cont);
   let token = cont[0], vueltas = 0;
-  while (token && key && out.length < 500 && vueltas < 10) {
+  while (token && key && out.length < 5000 && vueltas < 60) {
     vueltas++;
     const rr = await fetch('https://www.youtube.com/youtubei/v1/browse?key=' + key, {
       method: 'POST',
@@ -66,7 +66,7 @@ async function leerPlaylist(pl) {
     token = c2[0];
   }
   const vistos = new Set();
-  return out.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 500);
+  return out.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 5000);
 }
 
 const pos = (e) => e.t + (e.play ? (Date.now() - e.marca) / 1000 : 0);
@@ -162,7 +162,7 @@ io.on('connection', (socket) => {
 
   socket.on('titulos', async (ids, cb) => {
     if (!Array.isArray(ids) || typeof cb !== 'function') return;
-    ids = [...new Set(ids)].filter(okId).slice(0, 200);
+    ids = [...new Set(ids)].filter(okId).slice(0, 5000);
     const out = [];
     for (let i = 0; i < ids.length; i += 10) {
       const r = await Promise.all(ids.slice(i, i + 10).map(async (id) => ({ id, titulo: await tituloVideo(id, null) })));
@@ -176,7 +176,7 @@ io.on('connection', (socket) => {
     if (!e || !Array.isArray(items)) return;
     const nuevos = items
       .filter(v => v && okId(v.id) && typeof v.titulo === 'string')
-      .slice(0, 500)
+      .slice(0, 5000)
       .map(v => ({ id: v.id, titulo: v.titulo.slice(0, 150) }));
     e.lista.push(...nuevos);
     envLista(io.to(s), e);
