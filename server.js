@@ -40,7 +40,16 @@ function recoger(obj, out, cont) {
       obj.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
     if (tk) cont.push(tk);
   }
-  for (const k in obj) if (obj[k] && typeof obj[k] === 'object') recoger(obj[k], out, cont);
+  if (obj.lockupViewModel) {
+    const l = obj.lockupViewModel;
+    const m2 = l.metadata && l.metadata.lockupMetadataViewModel;
+    const tl = m2 && m2.title && m2.title.content;
+    if (l.contentId && tl && /VIDEO/.test(String(l.contentType || ''))) (out.alt = out.alt || []).push({ id: l.contentId, titulo: tl });
+  }
+  for (const k in obj) {
+    if (/(Renderer|ViewModel)$/.test(k)) { out.tipos = out.tipos || {}; out.tipos[k] = (out.tipos[k] || 0) + 1; }
+    if (obj[k] && typeof obj[k] === 'object') recoger(obj[k], out, cont);
+  }
 }
 
 async function leerPlaylist(pl) {
@@ -51,6 +60,7 @@ async function leerPlaylist(pl) {
   try {
     const r = await fetch('https://www.youtube.com/playlist?list=' + pl, { headers: CAB, signal: AbortSignal.timeout(15000) });
     const html = await r.text();
+    console.log('Playlist: pagina recibida, status ' + r.status + ', largo ' + html.length + ', trae playlistVideoRenderer: ' + html.includes('playlistVideoRenderer'));
     const m = html.match(/ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s);
     if (m) {
       key = (html.match(/"INNERTUBE_API_KEY":"([^"]+)"/) || [])[1];
@@ -94,9 +104,12 @@ async function leerPlaylist(pl) {
     } catch (e) { console.log('Playlist: se cortó en la vuelta ' + vueltas + ':', e.message); break; }
   }
 
-  console.log('Playlist: leidos ' + out.length + ', omitidos (privados/borrados) ' + (out.omitidos || 0) + ', vueltas ' + vueltas + ', quedaba mas: ' + (token ? 'si' : 'no'));
+  const fuente = out.length ? out : (out.alt || []);
+  const tipos = Object.entries(out.tipos || {}).sort((x, y) => y[1] - x[1]).slice(0, 12).map(([k, v]) => k + ':' + v).join(', ');
+  console.log('Playlist: leidos ' + out.length + ', alternos ' + (out.alt ? out.alt.length : 0) + ', omitidos ' + (out.omitidos || 0) + ', vueltas ' + vueltas + ', quedaba mas: ' + (token ? 'si' : 'no'));
+  console.log('Playlist: tipos encontrados -> ' + tipos);
   const vistos = new Set();
-  return out.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 5000);
+  return fuente.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 5000);
 }
 
 const pos = (e) => e.t + (e.play ? (Date.now() - e.marca) / 1000 : 0);
