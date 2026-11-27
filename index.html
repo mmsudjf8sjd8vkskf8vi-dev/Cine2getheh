@@ -279,7 +279,7 @@ function ajustes() {
     socket.emit('nombre', nombre);
   }
 }
-socket.on('connect', () => { miId = socket.id; if (sala) socket.emit('entrar', { sala, nombre }); });
+socket.on('connect', () => { miId = socket.id; });
 
 /* ---------- Pantallas deslizables ---------- */
 const pgs = $('pages');
@@ -303,7 +303,11 @@ function crearPlayer() {
     playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, disablekb: 1 },
     events: {
       onReady: () => { listo = true; if (pendiente) aplicar(pendiente); },
-      onError: () => { aviso('Video no disponible aquí, saltando…'); socket.emit('fin', yt.getVideoData().video_id); },
+      onError: () => {
+        aviso('Video no disponible aquí, saltando…');
+        const cur = yt.getVideoData && yt.getVideoData().video_id;
+        socket.emit('fin', cur || (pendiente && pendiente.id));
+      },
       onStateChange: (e) => {
         if (ignorar) return;
         if (e.data === 0) { socket.emit('fin', yt.getVideoData().video_id); return; }
@@ -320,8 +324,9 @@ function idDe(url) {
 }
 
 function aplicar(e) {
-  if (!listo) { pendiente = e; return; }
-  if (!e.id) return;
+  if (!e || !e.id) return;
+  pendiente = e;
+  if (!listo) return;
   ignorar = true;
   const actual = yt.getVideoData && yt.getVideoData().video_id;
   if (actual !== e.id) {
@@ -384,16 +389,20 @@ function obtenerIds(pl) {
     caja.style.cssText = 'position:fixed;left:-9999px;top:0;width:220px;height:220px';
     const hijo = document.createElement('div');
     caja.appendChild(hijo); document.body.appendChild(caja);
+    let ultimoLen = 0, estable = 0, n = 0;
     const tmp = new YT.Player(hijo, {
       width: 220, height: 220,
-      events: { onReady: () => tmp.cuePlaylist({ listType: 'playlist', list: pl }) }
+      events: { onReady: () => tmp.cuePlaylist({ listType: 'playlist', list: pl, index: 0 }) }
     });
-    let n = 0;
     const t = setInterval(() => {
       n++;
       let ids = null;
       try { ids = tmp.getPlaylist && tmp.getPlaylist(); } catch (e) {}
-      if ((ids && ids.length) || n > 30) {
+      if (ids && ids.length) {
+        if (ids.length === ultimoLen) estable++;
+        else { ultimoLen = ids.length; estable = 0; }
+      }
+      if ((ids && ids.length && estable >= 3) || n > 60) {
         clearInterval(t);
         try { tmp.destroy(); } catch (e) {}
         caja.remove();
@@ -421,7 +430,7 @@ async function buscar() {
 function pintarResultados() {
   if (!resultados.length) { $('bCont').innerHTML = '<p class="gris">No se encontró nada (¿video privado o borrado?).</p>'; return; }
   const boton = resEsLista
-    ? `<div class="imp"><button onclick="importarTodo()" ${importando ? 'disabled' : ''}>${importando ? '⏳' : '＋'} Importar Lista de Reproducción</button></div>` : '';
+    ? `<div class="imp"><button onclick="importarTodo()" ${importando ? 'disabled' : ''}>${importando ? '⏳' : '＋'} Importar Lista de Reproducción (${resultados.length})</button></div>` : '';
   $('bCont').innerHTML = boton + resultados.map((v, i) =>
     `<div class="res"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('cargar','${esc(v.id)}')"></div><div class="rt"><div>${esc(v.titulo)}</div><button onclick="anadir(${i})">＋ Añadir a Lista de Reproducción</button><button onclick="sugerir(${i})">› Sugerir</button></div></div>`).join('');
 }
