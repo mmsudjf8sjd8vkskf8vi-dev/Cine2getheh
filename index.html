@@ -212,17 +212,22 @@ $('lk').onkeydown=e=>{if(e.key==='Enter')addLink()};
 
 // ---------- Google ----------
 async function gInit(){
+  const b=$('gbtn');
   try{
     const c=(await (await fetch('/api/cfg')).json()).g;
-    if(!c)return;
-    const t=setInterval(()=>{if(window.google&&google.accounts){clearInterval(t);
-      google.accounts.id.initialize({client_id:c,callback:async r=>{
-        const x=await fetch('/api/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({c:r.credential})});
-        const j=await x.json();if(j.e)return toast(j.e);
-        localStorage.t=j.t;localStorage.n=j.n;conn();}});
-      google.accounts.id.renderButton($('gbtn'),{theme:'filled_black',size:'large',text:'continue_with',width:260});
-    }},300);
-  }catch(e){}
+    if(!c){b.innerHTML='<small>⚠️ Falta poner GOOGLE_CLIENT_ID en Render</small>';return}
+    let n=0;
+    const t=setInterval(()=>{
+      if(window.google&&google.accounts){
+        clearInterval(t);
+        google.accounts.id.initialize({client_id:c,callback:async r=>{
+          const x=await fetch('/api/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({c:r.credential})});
+          const j=await x.json();if(j.e)return toast(j.e);
+          localStorage.t=j.t;localStorage.n=j.n;conn();}});
+        google.accounts.id.renderButton(b,{theme:'filled_black',size:'large',text:'continue_with',width:260});
+      }else if(++n>30){clearInterval(t);b.innerHTML='<small>⚠️ No cargó Google. Revisa tu conexión</small>'}
+    },300);
+  }catch(e){b.innerHTML='<small>⚠️ El servidor no tiene la parte de Google. Actualiza server.js</small>'}
 }
 gInit();
 
