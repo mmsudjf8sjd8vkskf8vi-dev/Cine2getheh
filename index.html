@@ -1,73 +1,110 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0e0f14">
 <title>Cine con amigos</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#1b1d24;color:#eee;font:15px system-ui,sans-serif}
-.s{display:none;height:100dvh;flex-direction:column;padding:12px;gap:10px;overflow-y:auto}
+:root{--bg:#0e0f14;--s1:#171922;--s2:#222532;--tx:#f3f4f6;--mu:#9aa0b4;--a1:#8b5cf6;--ac:linear-gradient(135deg,#8b5cf6,#ec4899);--bd:rgba(255,255,255,.08)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.mu{color:var(--mu)}
+.s{display:none;height:100dvh;flex-direction:column;padding:16px;gap:12px;overflow-y:auto;background:radial-gradient(800px 380px at 50% -120px,rgba(139,92,246,.25),transparent)}
 .s.on{display:flex}
-input,button{font:inherit;padding:10px;border-radius:8px;border:0}
-input{background:#2a2d38;color:#eee;width:100%;min-width:0}
-button{background:#f5b301;color:#000;font-weight:600;cursor:pointer}
-button.g{background:#2a2d38;color:#eee}
-button.sm{padding:3px 8px;font-size:13px}
+h1{margin:0;font-size:26px;text-align:center}
+h2{margin:0;font-size:22px}
+h3{margin:0;font-size:16px}
+p{margin:0}
+input,button{font:inherit;border:0;outline:0}
+input{background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;width:100%;min-width:0}
+input:focus{border-color:var(--a1)}
+input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:#8b5cf6;flex:none}
+button{border-radius:12px;padding:12px 16px;font-weight:600;color:#fff;background:var(--ac);cursor:pointer}
+button:active{transform:scale(.97)}
+button.g{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
+button.sm{padding:4px 10px;font-size:13px;border-radius:8px}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .row{display:flex;gap:8px;align-items:center}
-.it{display:flex;align-items:center;gap:8px;background:#2a2d38;padding:8px;border-radius:8px;margin-bottom:6px;cursor:pointer}
-.it.on{outline:2px solid #f5b301}
-.it img{width:80px;height:45px;object-fit:cover;border-radius:4px}
-.it b,.it span{flex:1;font-weight:400;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-h2,h3{margin:6px 0}
-#room{padding:0;gap:6px;overflow:hidden}
-#top,#room .row,.tabs{padding:0 12px}
-#vid{aspect-ratio:16/9;background:#000;width:100%;flex:none}
+.bar{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.chip{background:var(--s2);border:1px solid var(--bd);border-radius:20px;padding:6px 12px;font-size:13px}
+.logo{width:76px;height:76px;border-radius:24px;background:var(--ac);display:grid;place-items:center;font-size:38px;margin:0 auto;box-shadow:0 10px 30px rgba(139,92,246,.4)}
+.lbl{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:14px}
+.it{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--bd);padding:8px;border-radius:14px;margin-bottom:8px;cursor:pointer}
+.it.on{border-color:var(--a1);background:linear-gradient(90deg,rgba(139,92,246,.22),var(--s1))}
+.it img{width:96px;height:54px;border-radius:8px;object-fit:cover;background:#000;flex:none}
+.t{flex:1;min-width:0;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ico{width:44px;height:44px;border-radius:12px;background:var(--ac);display:grid;place-items:center;font-size:20px;flex:none}
+.empty{color:var(--mu);text-align:center;padding:24px 8px}
+#room{padding:0;gap:8px;overflow:hidden}
+#top{padding:10px 12px 0}
+#room .row{padding:0 12px}
+#vid{aspect-ratio:16/9;background:#000;width:100%;flex:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
 #vid iframe{width:100%;height:100%}
-.tabs{display:flex;gap:6px}.tabs button{flex:1}
-#pan{display:flex;flex:1;min-height:0;overflow-x:auto;scroll-snap-type:x mandatory}
-.pn{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:4px 12px;display:flex;flex-direction:column;min-height:0}
-#chat{flex:1;overflow-y:auto}.m{margin-bottom:6px;word-break:break-word}
-.p{background:#2a2d38;padding:10px;border-radius:8px;margin-bottom:6px}
+.tabs{display:flex;gap:4px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:4px;margin:0 12px}
+.tabs button{flex:1;background:transparent;color:var(--mu);padding:9px 4px;font-size:14px;border-radius:10px}
+.tabs button.on{background:var(--ac);color:#fff}
+#pan{display:flex;flex:1;min-height:0;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+#pan::-webkit-scrollbar{display:none}
+.pn{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:4px 12px 12px;display:flex;flex-direction:column;min-height:0}
+#chat{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px 0}
+.m{max-width:85%;background:var(--s2);padding:8px 12px;border-radius:14px 14px 14px 4px;word-break:break-word;align-self:flex-start}
+.m.me{align-self:flex-end;background:var(--ac);border-radius:14px 14px 4px 14px}
+.m b{display:block;font-size:12px;opacity:.75}
+.m .acts{display:flex;gap:6px;margin-top:6px}
+.p{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--bd);padding:10px;border-radius:14px;margin-bottom:8px}
+.p i{width:36px;height:36px;border-radius:50%;background:var(--ac);display:grid;place-items:center;font-style:normal;font-weight:700;flex:none}
+#cnt{color:var(--mu);margin:2px 2px 8px}
 #hid{position:fixed;left:-300px;top:0;width:10px;height:10px;overflow:hidden}
-#toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;padding:10px 16px;border-radius:20px;z-index:9;max-width:90%}
+#toast{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--bd);box-shadow:0 8px 30px rgba(0,0,0,.5);padding:10px 18px;border-radius:24px;z-index:9;max-width:90%;text-align:center}
 </style></head><body>
 
-<div id="auth" class="s">
-  <h2>🎬 Cine con amigos</h2>
-  <input id="u" placeholder="Usuario" autocapitalize="none">
-  <input id="p" type="password" placeholder="Clave">
-  <button onclick="doAuth('login')">Iniciar sesión</button>
-  <button class="g" onclick="doAuth('register')">Crear cuenta</button>
+<div id="auth" class="s" style="justify-content:center">
+  <div class="logo">🎬</div>
+  <h1>Cine con amigos</h1>
+  <p class="mu" style="text-align:center">Mira videos y películas juntos, sincronizados.</p>
+  <div class="card">
+    <input id="u" placeholder="Usuario" autocapitalize="none">
+    <input id="p" type="password" placeholder="Clave">
+    <button onclick="doAuth('login')">Iniciar sesión</button>
+    <button class="g" onclick="doAuth('register')">Crear cuenta</button>
+  </div>
 </div>
 
 <div id="rooms" class="s">
-  <div class="row"><h2 style="flex:1">Mis Salas</h2><span id="me"></span><button class="g" onclick="logout()">Salir</button></div>
+  <div class="bar"><h2>Mis Salas</h2><div class="row"><span class="chip" id="me"></span><button class="g sm" onclick="logout()">Salir</button></div></div>
   <div id="rl"></div>
-  <h3>Crear sala</h3>
-  <input id="rname" placeholder="Nombre de la sala">
-  <label><input type="checkbox" id="rpriv" checked style="width:auto"> Privada (pide clave)</label>
-  <input id="rpass" placeholder="Clave de la sala">
-  <button onclick="create()">Crear sala</button>
-  <h3>Entrar con código</h3>
-  <div class="row"><input id="jid" placeholder="Código"><input id="jpass" placeholder="Clave (si es privada)"></div>
-  <button class="g" onclick="enter($('jid').value.trim().toUpperCase(),$('jpass').value)">Entrar</button>
+  <div class="card">
+    <h3>✨ Crear sala</h3>
+    <input id="rname" placeholder="Nombre de la sala">
+    <label class="lbl"><input type="checkbox" id="rpriv" checked> Privada (pide clave)</label>
+    <input id="rpass" placeholder="Clave de la sala">
+    <button onclick="create()">Crear sala</button>
+  </div>
+  <div class="card">
+    <h3>🔑 Entrar con código</h3>
+    <div class="row"><input id="jid" placeholder="Código"><input id="jpass" placeholder="Clave (si es privada)"></div>
+    <button class="g" onclick="enter($('jid').value.trim().toUpperCase(),$('jpass').value)">Entrar</button>
+  </div>
 </div>
 
 <div id="room" class="s">
-  <div id="top" class="row" style="padding-top:8px">
-    <button class="g" onclick="back()">←</button>
-    <div><b id="rn"></b><br><small>Código: <span id="rc"></span></small></div>
+  <div id="top" class="bar">
+    <div class="row" style="padding:0;min-width:0">
+      <button class="g" onclick="back()">←</button>
+      <b id="rn" style="font-size:17px"></b>
+    </div>
+    <button class="g sm" onclick="copyCode()">📋 <span id="rc"></span></button>
   </div>
   <div id="vid"><div id="pl"></div></div>
   <div class="row"><input id="lk" placeholder="Pega un enlace de video o lista de YouTube"><button onclick="addLink()">Añadir</button></div>
   <div class="tabs">
-    <button class="g" onclick="tab(0)">👥 Personas</button>
-    <button class="g" onclick="tab(1)">💬 Chat</button>
-    <button class="g" onclick="tab(2)">🎞 Lista</button>
+    <button class="on" onclick="tab(0)">👥 Personas</button>
+    <button onclick="tab(1)">💬 Chat</button>
+    <button onclick="tab(2)">🎞 Lista</button>
   </div>
   <div id="pan">
     <div class="pn" id="pp"></div>
-    <div class="pn"><div id="chat"></div><div class="row" style="padding:6px 0"><input id="cm" placeholder="Mensaje"><button onclick="send()">➤</button></div></div>
-    <div class="pn"><small id="cnt"></small><div id="ql"></div></div>
+    <div class="pn"><div id="chat"></div><div class="row" style="padding:6px 0 0"><input id="cm" placeholder="Escribe un mensaje"><button onclick="send()">➤</button></div></div>
+    <div class="pn"><div id="cnt"></div><div id="ql"></div></div>
   </div>
 </div>
 
@@ -82,6 +119,15 @@ const ID=/(?:v=|youtu\.be\/|shorts\/|embed\/)([\w-]{11})/;
 function show(x){['auth','rooms','room'].forEach(i=>$(i).classList.toggle('on',i===x));inRoom=x==='room'}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',2800)}
 function tab(i){$('pan').scrollTo({left:i*$('pan').clientWidth,behavior:'smooth'})}
+$('pan').addEventListener('scroll',()=>{
+  const i=Math.round($('pan').scrollLeft/$('pan').clientWidth);
+  document.querySelectorAll('.tabs button').forEach((b,j)=>b.classList.toggle('on',j===i));
+});
+function copyCode(){
+  const c=$('rc').textContent;
+  if(navigator.clipboard)navigator.clipboard.writeText(c).then(()=>toast('Código copiado: '+c)).catch(()=>toast('Código: '+c));
+  else toast('Código: '+c);
+}
 
 // ---------- Cuenta ----------
 async function doAuth(kind){
@@ -98,7 +144,15 @@ function conn(){
   S=io({auth:{t:localStorage.t}});
   S.on('connect_error',e=>{if(e.message==='auth'){localStorage.removeItem('t');show('auth')}});
   S.on('connect',()=>{$('me').textContent='👤 '+localStorage.n;cr&&inRoom?enter(cr.id,cr.pass,1):loadRooms()});
-  S.on('ppl',l=>{const el=$('pp');el.innerHTML='';l.forEach(x=>{const d=document.createElement('div');d.className='p';d.textContent=(x.o?'♛ ':'👤 ')+x.n;el.appendChild(d)})});
+  S.on('ppl',l=>{
+    const el=$('pp');el.innerHTML='';
+    l.forEach(x=>{
+      const d=document.createElement('div');d.className='p';
+      const a=document.createElement('i');a.textContent=x.n[0].toUpperCase();
+      const n=document.createElement('span');n.textContent=x.n+(x.o?' ♛':'');
+      d.append(a,n);el.appendChild(d);
+    });
+  });
   S.on('chat',addChat);
   S.on('q',d=>{Q=d.q;cur=d.cur;rl()});
   S.on('go',d=>{cur=d.cur;rl();const x=Q[cur];if(x)load(x.id,0,true)});
@@ -115,14 +169,19 @@ function loadRooms(){
   show('rooms');
   S.emit('my',l=>{
     const el=$('rl');el.innerHTML='';
-    if(!l.length)el.innerHTML='<small>Aún no tienes salas. Crea una abajo.</small>';
+    if(!l.length)el.innerHTML='<div class="empty">Aún no tienes salas.<br>Crea una abajo 👇</div>';
     l.forEach(r=>{
       const d=document.createElement('div');d.className='it';
-      const sp=document.createElement('span');
-      sp.textContent=(r.priv?'🔒 ':'')+r.name+' · '+r.id+' · 👤'+r.n;
-      d.appendChild(sp);
-      if(r.own){const b=document.createElement('button');b.className='g sm';b.textContent='🗑';
-        b.onclick=e=>{e.stopPropagation();if(confirm('¿Eliminar la sala "'+r.name+'"?')){S.emit('del',r.id);setTimeout(loadRooms,300)}};d.appendChild(b)}
+      const ic=document.createElement('div');ic.className='ico';ic.textContent=r.priv?'🔒':'🎬';
+      const inf=document.createElement('div');inf.style.cssText='flex:1;min-width:0';
+      const b=document.createElement('div');b.className='t';b.textContent=r.name;
+      const sm=document.createElement('small');sm.className='mu';sm.textContent='Código '+r.id+' · '+r.n+' conectados';
+      inf.append(b,sm);d.append(ic,inf);
+      if(r.own){
+        const k=document.createElement('button');k.className='g sm';k.textContent='🗑';
+        k.onclick=e=>{e.stopPropagation();if(confirm('¿Eliminar la sala "'+r.name+'"?')){S.emit('del',r.id);setTimeout(loadRooms,300)}};
+        d.appendChild(k);
+      }
       d.onclick=()=>enter(r.id,'');
       el.appendChild(d);
     });
@@ -162,10 +221,11 @@ function sc(e){
 // ---------- Lista ----------
 function rl(){
   const el=$('ql');el.innerHTML='';
+  if(!Q.length)el.innerHTML='<div class="empty">La lista está vacía.<br>Pega un enlace arriba 👆</div>';
   Q.forEach((x,i)=>{
     const d=document.createElement('div');d.className='it'+(i===cur?' on':'');
     const im=new Image();im.loading='lazy';im.src='https://i.ytimg.com/vi/'+encodeURIComponent(x.id)+'/mqdefault.jpg';
-    const b=document.createElement('b');b.textContent=x.t||('Video '+(i+1));
+    const b=document.createElement('div');b.className='t';b.textContent=(i===cur?'▶ ':'')+(x.t||('Video '+(i+1)));
     const k=document.createElement('button');k.className='g sm';k.textContent='✕';
     k.onclick=e=>{e.stopPropagation();S.emit('rm',i)};
     d.append(im,b,k);d.onclick=()=>S.emit('play',i);el.appendChild(d);
@@ -195,13 +255,19 @@ function imp(list){
 
 // ---------- Chat ----------
 function addChat(d){
-  const e=document.createElement('div');e.className='m';
-  const b=document.createElement('b');b.textContent=d.n+': ';e.append(b,d.m);
+  const e=document.createElement('div');
+  e.className='m'+(d.n===localStorage.n?' me':'');
+  const b=document.createElement('b');b.textContent=d.n;
+  e.append(b,document.createTextNode(d.m));
   const m=d.m.match(ID);
-  if(m)[['▶ Reproducir',1],['＋ Añadir',0]].forEach(([t,p])=>{
-    const k=document.createElement('button');k.className='g sm';k.textContent=t;
-    k.onclick=()=>S.emit('add',[{id:m[1],t:''}],p);e.append(' ',k);
-  });
+  if(m){
+    const a=document.createElement('div');a.className='acts';
+    [['▶ Reproducir',1],['＋ Añadir',0]].forEach(([t,p])=>{
+      const k=document.createElement('button');k.className='g sm';k.textContent=t;
+      k.onclick=()=>S.emit('add',[{id:m[1],t:''}],p);a.appendChild(k);
+    });
+    e.appendChild(a);
+  }
   const c=$('chat');c.appendChild(e);c.scrollTop=c.scrollHeight;
 }
 function send(){const v=$('cm').value.trim();if(v){S.emit('chat',v);$('cm').value=''}}
