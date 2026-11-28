@@ -24,17 +24,16 @@ button{background:#2b3648;color:#fff}
 #sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto}
 #vbox{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex:none}
 #vbox.mini{position:fixed;right:8px;bottom:8px;width:55%;max-width:320px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #000a}
-#player,#appBox{width:100%;height:100%}
-#appBox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;text-align:center;background:radial-gradient(circle at top,#26163d,#090d16)}
-.tbadge{display:inline-block;background:#a855f7;color:#fff;font-weight:bold;font-size:11px;padding:3px 8px;border-radius:999px}
+#player,#extFrame{width:100%;height:100%;border:0}
+#extBar{position:absolute;top:6px;left:6px;right:6px;display:flex;align-items:center;gap:6px;background:rgba(11,15,25,.82);padding:4px 8px;border-radius:8px;z-index:5}
+#extBar span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+#extBar button{font-size:12px;padding:4px 8px;border-radius:6px;flex:none}
+.tbadge{display:inline-block;background:#a855f7;color:#fff;font-weight:bold;font-size:11px;padding:2px 7px;border-radius:999px}
 .tbadge.pluto{background:#2563eb}
 .tbadge.vix{background:#ea580c}
 .tbadge.mplay{background:#ca8a04;color:#000}
 .tbadge.archive{background:#0d9488}
 .tbadge.plex{background:#d97706;color:#000}
-#appBox .ttit{font-size:15px;font-weight:bold;max-width:95%}
-#appBox .tbtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-#appBox .tbtns button{font-size:13px;padding:8px 12px}
 #ctl{display:flex;align-items:center;gap:6px;background:#0b0f19;padding:2px 8px;flex:none}
 #ctl button{background:none;padding:8px;font-size:18px}
 #tiempo{font-size:14px;min-width:46px}
@@ -150,15 +149,13 @@ button{background:#2b3648;color:#fff}
 <div id="sala" hidden>
   <div id="vbox">
     <div id="player"></div>
-    <div id="appBox" hidden>
+    <div id="extBar" hidden>
       <span id="appBadge" class="tbadge">APP</span>
-      <div class="ttit" id="appActualTit">Contenido externo</div>
-      <div class="gris" id="appActualUrl" style="font-size:12px;word-break:break-all"></div>
-      <div class="tbtns">
-        <button class="am" onclick="abrirAppActual()">▶ Abrir contenido</button>
-        <button onclick="copiarAppActual()">📋 Copiar enlace</button>
-      </div>
+      <span id="appActualTit">Contenido</span>
+      <button onclick="abrirAppNuevaPestana()">↗ Nueva pestaña</button>
+      <button onclick="cerrarAppEmbed()">✕</button>
     </div>
+    <iframe id="extFrame" hidden allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerpolicy="no-referrer-when-downgrade"></iframe>
   </div>
   <div id="ctl">
     <button id="bPlay" onclick="playPausa()">▶</button>
@@ -247,8 +244,8 @@ button{background:#2b3648;color:#fff}
   <div class="bpan on" id="bCont"><p class="gris">Pega un enlace de YouTube (video o playlist) o de Tubi, Pluto TV, ViX, Mercado Play, Internet Archive o Plex y toca 🔍.</p></div>
   <div class="bpan" id="bApps">
     <div class="appCard">
-      <b>Cargar app gratuita en la sala</b>
-      <p class="gris" style="font-size:13px;margin:6px 0">Elige la app, pega el enlace o ID y agrega un título opcional.</p>
+      <b>Reproducir app dentro de la página</b>
+      <p class="gris" style="font-size:13px;margin:6px 0">Elige la app, pega enlace o ID (en Internet Archive puedes usar el ID para reproductor embebido).</p>
       <select id="appSel">
         <option value="tubi">Tubi</option>
         <option value="pluto">Pluto TV</option>
@@ -260,21 +257,21 @@ button{background:#2b3648;color:#fff}
       <input id="appUrl" placeholder="Pega enlace o ID del contenido">
       <input id="appTit" placeholder="Título opcional">
       <div class="appRow">
-        <button class="am" onclick="cargarAppInput()">▶ Cargar en sala</button>
+        <button class="am" onclick="cargarAppInput()">▶ Reproducir aquí</button>
         <button onclick="agregarAppInput()">＋ Añadir a lista</button>
         <button onclick="sugerirAppInput()">💬 Sugerir al chat</button>
       </div>
     </div>
 
     <div class="appCard">
-      <b>Accesos rápidos (catálogo gratis)</b>
+      <b>Cargar dentro del reproductor</b>
       <div class="appRow">
-        <button onclick="window.open('https://tubitv.com','_blank','noopener')">Tubi</button>
-        <button onclick="window.open('https://pluto.tv','_blank','noopener')">Pluto TV</button>
-        <button onclick="window.open('https://www.vix.com','_blank','noopener')">ViX</button>
-        <button onclick="window.open('https://play.mercadolibre.com.mx','_blank','noopener')">Mercado Play</button>
-        <button onclick="window.open('https://archive.org/details/movies','_blank','noopener')">Internet Archive</button>
-        <button onclick="window.open('https://watch.plex.tv','_blank','noopener')">Plex</button>
+        <button onclick="cargarDirectoApp('tubi','https://tubitv.com','Tubi')">Tubi</button>
+        <button onclick="cargarDirectoApp('pluto','https://pluto.tv','Pluto TV')">Pluto TV</button>
+        <button onclick="cargarDirectoApp('vix','https://www.vix.com','ViX')">ViX</button>
+        <button onclick="cargarDirectoApp('mplay','https://play.mercadolibre.com.mx','Mercado Play')">Mercado Play</button>
+        <button onclick="cargarDirectoApp('archive','https://archive.org/details/movies','Internet Archive')">Internet Archive</button>
+        <button onclick="cargarDirectoApp('plex','https://watch.plex.tv','Plex')">Plex</button>
       </div>
     </div>
   </div>
@@ -378,7 +375,7 @@ document.querySelectorAll('.stabs button').forEach(b => b.onclick = () => {
   if (b.dataset.s === 'pLista') renderLista();
 });
 
-/* ---------- Detección de apps ---------- */
+/* ---------- Detección y reproducción embebida ---------- */
 function detectarFuente(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
@@ -391,19 +388,28 @@ function detectarFuente(raw) {
   return null;
 }
 
+function resolverEmbedUrl(fuente, rawOrId) {
+  const s = String(rawOrId || '').trim();
+  const meta = APPS_META[fuente] || APPS_META.tubi;
+  let url = /^https?:\/\//i.test(s) ? s : (s ? meta.pathPrefix + s.replace(/^\/+/, '') : meta.home);
+
+  if (fuente === 'archive') {
+    const m = url.match(/archive\.org\/(?:details|embed)\/([^/?#]+)/i);
+    const itemId = m ? m[1] : (!/^https?:\/\//i.test(s) ? s.replace(/^\/+/, '') : '');
+    if (itemId) return { embedUrl: `https://archive.org/embed/${encodeURIComponent(itemId)}`, openUrl: url };
+  }
+  return { embedUrl: url, openUrl: url };
+}
+
 function parseAppItem(raw, fuenteForzada = null) {
   const s = String(raw || '').trim();
   if (!s) return null;
   const f = fuenteForzada || detectarFuente(s);
   if (!f || !APPS_META[f]) return null;
   const meta = APPS_META[f];
-  let url = s;
-  if (!/^https?:\/\//i.test(s)) {
-    const limpioId = s.replace(/^\/+/, '');
-    url = limpioId ? meta.pathPrefix + limpioId : meta.home;
-  }
-  const id = url.replace(/^https?:\/\//i, '').slice(0, 120) || f;
-  return { id, url, titulo: `${meta.label}: ${s.slice(0, 70)}`, fuente: f };
+  const { openUrl } = resolverEmbedUrl(f, s);
+  const id = openUrl.replace(/^https?:\/\//i, '').slice(0, 140) || f;
+  return { id, url: openUrl, titulo: `${meta.label}: ${s.slice(0, 70)}`, fuente: f };
 }
 
 function badgeHtml(fuente) {
@@ -418,16 +424,18 @@ function chatBadgeHtml(fuente) {
 function mostrarModoFuente(fuente, id, titulo) {
   const esApp = Boolean(fuente && fuente !== 'yt' && APPS_META[fuente] && id);
   fuenteActual = esApp ? fuente : 'yt';
-  $('appBox').hidden = !esApp;
+  $('extBar').hidden = !esApp;
+  $('extFrame').hidden = !esApp;
   if ($('player')) $('player').style.display = esApp ? 'none' : 'block';
+
   if (esApp) {
     const meta = APPS_META[fuente];
-    const url = /^https?:\/\//i.test(id) ? id : (meta.pathPrefix + String(id).replace(/^\/+/, ''));
-    appActual = { fuente, id, url, titulo: titulo || `${meta.label}: ${id}` };
+    const { embedUrl, openUrl } = resolverEmbedUrl(fuente, id);
+    appActual = { fuente, id, url: openUrl, titulo: titulo || `${meta.label}: ${id}` };
     $('appBadge').className = `tbadge ${fuente}`;
     $('appBadge').textContent = meta.label;
     $('appActualTit').textContent = appActual.titulo;
-    $('appActualUrl').textContent = appActual.url;
+    $('extFrame').src = embedUrl;
     if (listo && yt && yt.pauseVideo) {
       ignorar = true;
       try { yt.pauseVideo(); } catch (e) {}
@@ -435,17 +443,16 @@ function mostrarModoFuente(fuente, id, titulo) {
     }
   } else {
     appActual = null;
+    $('extFrame').src = 'about:blank';
   }
 }
 
-function abrirAppActual() {
+function cerrarAppEmbed() {
+  mostrarModoFuente('yt', null, null);
+}
+function abrirAppNuevaPestana() {
   if (!appActual) return;
   window.open(appActual.url, '_blank', 'noopener');
-}
-function copiarAppActual() {
-  if (!appActual) return;
-  if (navigator.clipboard) navigator.clipboard.writeText(appActual.url);
-  aviso('Enlace copiado');
 }
 
 function datosAppInput() {
@@ -468,6 +475,10 @@ function cargarAppInput() {
   const d = datosAppInput();
   if (!d) return;
   socket.emit('cargar', { id: d.id, titulo: d.titulo, fuente: d.fuente });
+  cerrarBuscador();
+}
+function cargarDirectoApp(fuente, url, titulo) {
+  socket.emit('cargar', { id: url, titulo, fuente });
   cerrarBuscador();
 }
 function agregarAppInput() {
@@ -553,7 +564,7 @@ $('seek').addEventListener('change', () => {
   arrastrando = false;
 });
 function playPausa() {
-  if (fuenteActual !== 'yt') return abrirAppActual();
+  if (fuenteActual !== 'yt') return abrirAppNuevaPestana();
   if (!listo) return;
   yt.getPlayerState() === 1 ? yt.pauseVideo() : yt.playVideo();
 }
