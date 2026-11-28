@@ -29,7 +29,6 @@ function crearSala(codigo) {
   return {
     codigo,
     usuarios: new Map(), // socketId -> { id, nombre, host }
-    vip: false,
     items: [],          // [{ id, titulo, fuente }]
     pos: -1,
     historial: [],    // [{ id, titulo, fuente }]
@@ -46,11 +45,6 @@ function esHost(salaObj, socketId) {
   return Boolean(salaObj.usuarios.get(socketId)?.host);
 }
 
-function puedeControlar(salaObj, socketId) {
-  if (!salaObj.vip) return true;
-  return esHost(salaObj, socketId);
-}
-
 function tiempoActual(salaObj) {
   const e = salaObj.estado;
   if (!e.id || !e.play) return e.t || 0;
@@ -63,8 +57,7 @@ function emitirEstado(salaObj, target = null) {
     id: salaObj.estado.id,
     fuente: normFuente(salaObj.estado.fuente),
     play: Boolean(salaObj.estado.play),
-    t: tiempoActual(salaObj),
-    vip: Boolean(salaObj.vip)
+    t: tiempoActual(salaObj)
   };
   if (target) target.emit('estado', payload);
   else io.to(salaObj.codigo).emit('estado', payload);
@@ -252,16 +245,6 @@ io.on('connection', (socket) => {
     if (limp) { u.nombre = limp; emitirUsuarios(salaActual); }
   });
 
-  socket.on('toggleVip', () => {
-    if (!salaActual) return;
-    if (!esHost(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Solo el anfitrión 👑 puede cambiar el modo VIP');
-    }
-    salaActual.vip = !salaActual.vip;
-    io.to(salaActual.codigo).emit('aviso', salaActual.vip ? 'Modo VIP activado (solo 👑 controla)' : 'Modo VIP desactivado');
-    emitirEstado(salaActual);
-  });
-
   socket.on('expulsar', (targetId) => {
     if (!salaActual || !targetId) return;
     if (!esHost(salaActual, socket.id)) {
@@ -280,24 +263,18 @@ io.on('connection', (socket) => {
 
   socket.on('control', ({ play, t }) => {
     if (!salaActual) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      emitirEstado(salaActual, socket);
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 controla la reproducción');
-    }
     const tiempo = typeof t === 'number' && !Number.isNaN(t) ? Math.max(0, t) : tiempoActual(salaActual);
     salaActual.estado = { ...salaActual.estado, play: Boolean(play), t: tiempo, ts: Date.now() };
     socket.to(salaActual.codigo).emit('estado', {
       id: salaActual.estado.id,
       fuente: normFuente(salaActual.estado.fuente),
       play: salaActual.estado.play,
-      t: salaActual.estado.t,
-      vip: Boolean(salaActual.vip)
+      t: salaActual.estado.t
     });
   });
 
   socket.on('fin', (videoIdTerminado) => {
     if (!salaActual || !salaActual.items.length) return;
-    if (!puedeControlar(salaActual, socket.id)) return;
     let idx = salaActual.pos;
     if (idx < 0 && videoIdTerminado) {
       idx = salaActual.items.findIndex(v => v.id === videoIdTerminado);
@@ -314,9 +291,6 @@ io.on('connection', (socket) => {
 
   socket.on('cargar', async (payload) => {
     if (!salaActual || !payload) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede cambiar el video');
-    }
     if (typeof payload === 'object') {
       const id = String(payload.id || '').trim();
       const fuente = normFuente(payload.fuente);
@@ -332,26 +306,17 @@ io.on('connection', (socket) => {
 
   socket.on('reproducir', (idx) => {
     if (!salaActual) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 controla la lista');
-    }
     reproducirIndice(salaActual, Number(idx) || 0);
   });
 
   socket.on('siguiente', () => {
     if (!salaActual || !salaActual.items.length) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 controla la lista');
-    }
     const next = salaActual.pos < 0 ? 0 : (salaActual.pos + 1) % salaActual.items.length;
     reproducirIndice(salaActual, next);
   });
 
   socket.on('mezclar', () => {
     if (!salaActual || salaActual.items.length < 2) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede mezclar');
-    }
     const actual = salaActual.pos >= 0 ? salaActual.items[salaActual.pos] : null;
     for (let i = salaActual.items.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -364,9 +329,6 @@ io.on('connection', (socket) => {
 
   socket.on('vaciar', () => {
     if (!salaActual) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede vaciar la lista');
-    }
     salaActual.items = [];
     salaActual.pos = -1;
     emitirLista(salaActual);
@@ -375,9 +337,6 @@ io.on('connection', (socket) => {
 
   socket.on('quitar', (idx) => {
     if (!salaActual) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede quitar videos');
-    }
     const i = Number(idx);
     if (i < 0 || i >= salaActual.items.length) return;
     salaActual.items.splice(i, 1);
@@ -389,9 +348,6 @@ io.on('connection', (socket) => {
 
   socket.on('renombrar', ({ i, titulo }) => {
     if (!salaActual) return;
-    if (!puedeControlar(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede renombrar');
-    }
     const idx = Number(i);
     const nuevo = String(titulo || '').trim().slice(0, 120);
     if (idx < 0 || idx >= salaActual.items.length || !nuevo) return;
