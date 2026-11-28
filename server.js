@@ -30,7 +30,7 @@ function save() {
 
 // ---- Cuentas ----
 const hash = (p, s = crypto.randomBytes(8).toString('hex')) => s + ':' + crypto.scryptSync(p, s, 32).toString('hex');
-const ok = (p, h) => hash(p, h.split(':')[0]) === h;
+const ok = (p, h) => !!h && hash(p, h.split(':')[0]) === h;
 const tok = k => { const t = crypto.randomBytes(24).toString('hex'); db.tokens[t] = k; save(); return t; };
 const E = (r, m) => r.status(400).json({ e: m });
 
@@ -46,6 +46,18 @@ app.post('/api/login', (q, r) => {
   const k = String(q.body.u || '').toLowerCase(), x = db.users[k];
   if (!x || !ok(String(q.body.p || ''), x.h)) return E(r, 'Usuario o clave incorrectos');
   r.json({ t: tok(k), n: x.n });
+});
+
+// ---- Google ----
+app.get('/api/cfg', (q, r) => r.json({ g: process.env.GOOGLE_CLIENT_ID || '' }));
+app.post('/api/google', async (q, r) => {
+  try {
+    const x = await (await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(String(q.body.c || '')))).json();
+    if (!x.sub || x.aud !== process.env.GOOGLE_CLIENT_ID) return E(r, 'Google no pudo verificar tu cuenta');
+    const k = 'g:' + x.sub, n = String(x.given_name || x.name || 'Usuario').slice(0, 20);
+    if (!db.users[k]) db.users[k] = { n, h: '', rooms: [] };
+    r.json({ t: tok(k), n: db.users[k].n });
+  } catch (e) { E(r, 'Error con Google'); }
 });
 
 // ---- Salas ----
