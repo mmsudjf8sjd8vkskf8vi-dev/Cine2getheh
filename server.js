@@ -1,451 +1,155 @@
-const path = require('path');
-const https = require('https');
-const express = require('express');
-const http = require('http');
+const express = require('express'), http = require('http'), crypto = require('crypto'), fs = require('fs');
 const { Server } = require('socket.io');
+const app = express(), srv = http.createServer(app);
+const io = new Server(srv, { maxHttpBufferSize: 5e6 });
+app.use(express.json());
+app.get('/', (q, r) => r.sendFile(__dirname + '/index.html'));
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-const PORT = process.env.PORT || 3000;
-const FUENTES_EXT = new Set(['tubi', 'pluto', 'vix', 'mplay', 'archive', 'plex']);
-
-function normFuente(f) {
-  const s = String(f || 'yt').trim().toLowerCase();
-  return FUENTES_EXT.has(s) ? s : 'yt';
-}
-
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'índice.html'));
-});
-
-const salas = new Map();
-
-function crearSala(codigo) {
-  return {
-    codigo,
-    usuarios: new Map(), // socketId -> { id, nombre, host }
-    items: [],          // [{ id, titulo, fuente }]
-    pos: -1,
-    historial: [],    // [{ id, titulo, fuente }]
-    estado: { id: null, fuente: 'yt', play: false, t: 0, ts: Date.now() }
-  };
-}
-
-function obtenerSala(codigo) {
-  if (!salas.has(codigo)) salas.set(codigo, crearSala(codigo));
-  return salas.get(codigo);
-}
-
-function esHost(salaObj, socketId) {
-  return Boolean(salaObj.usuarios.get(socketId)?.host);
-}
-
-function tiempoActual(salaObj) {
-  const e = salaObj.estado;
-  if (!e.id || !e.play) return e.t || 0;
-  const delta = (Date.now() - (e.ts || Date.now())) / 1000;
-  return Math.max(0, (e.t || 0) + delta);
-}
-
-function emitirEstado(salaObj, target = null) {
-  const payload = {
-    id: salaObj.estado.id,
-    fuente: normFuente(salaObj.estado.fuente),
-    play: Boolean(salaObj.estado.play),
-    t: tiempoActual(salaObj)
-  };
-  if (target) target.emit('estado', payload);
-  else io.to(salaObj.codigo).emit('estado', payload);
-}
-
-function emitirUsuarios(salaObj) {
-  const lista = Array.from(salaObj.usuarios.values());
-  io.to(salaObj.codigo).emit('usuarios', lista);
-}
-
-function emitirLista(salaObj, target = null) {
-  const payload = { items: salaObj.items, pos: salaObj.pos };
-  if (target) target.emit('lista', payload);
-  else io.to(salaObj.codigo).emit('lista', payload);
-}
-
-function emitirHistorial(salaObj, target = null) {
-  if (target) target.emit('historial', salaObj.historial);
-  else io.to(salaObj.codigo).emit('historial', salaObj.historial);
-}
-
-function agregarHistorial(salaObj, video) {
-  if (!video || !video.id) return;
-  const item = {
-    id: String(video.id),
-    titulo: String(video.titulo || video.id),
-    fuente: normFuente(video.fuente)
-  };
-  salaObj.historial = [
-    item,
-    ...salaObj.historial.filter(v => !(v.id === item.id && normFuente(v.fuente) === item.fuente))
-  ].slice(0, 50);
-  emitirHistorial(salaObj);
-}
-
-function reproducirIndice(salaObj, idx) {
-  if (!salaObj.items.length) return;
-  const i = ((idx % salaObj.items.length) + salaObj.items.length) % salaObj.items.length;
-  salaObj.pos = i;
-  const v = salaObj.items[i];
-  const fuente = normFuente(v.fuente);
-  salaObj.estado = { id: v.id, fuente, play: true, t: 0, ts: Date.now() };
-  agregarHistorial(salaObj, v);
-  emitirLista(salaObj);
-  emitirEstado(salaObj);
-}
-
-function cargarVideoDirecto(salaObj, id, titulo = null, fuente = 'yt') {
-  if (!id) return;
-  const limpio = String(id).trim();
-  if (!limpio) return;
-  const src = normFuente(fuente);
-  const idx = salaObj.items.findIndex(v => v.id === limpio && normFuente(v.fuente) === src);
-  if (idx !== -1) salaObj.pos = idx;
-  salaObj.estado = { id: limpio, fuente: src, play: true, t: 0, ts: Date.now() };
-  agregarHistorial(salaObj, { id: limpio, titulo: titulo || limpio, fuente: src });
-  emitirLista(salaObj);
-  emitirEstado(salaObj);
-}
-
-/* ---------- Consulta YouTube (sin API key) ---------- */
-function fetchTexto(url, redirects = 0) {
-  return new Promise((resolve, reject) => {
-    if (redirects > 5) return reject(new Error('Demasiadas redirecciones'));
-    const req = https.get(
-      url,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept-Language': 'es-419,es;q=0.9,en;q=0.8'
-        }
-      },
-      (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          const nextUrl = new URL(res.headers.location, url).toString();
-          res.resume();
-          return resolve(fetchTexto(nextUrl, redirects + 1));
-        }
-        let raw = '';
-        res.setEncoding('utf8');
-        res.on('data', chunk => { raw += chunk; });
-        res.on('end', () => resolve(raw));
-      }
-    );
-    req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout')); });
-    req.on('error', reject);
-  });
-}
-
-async function obtenerTituloVideo(id) {
+// ---- Base de datos (Upstash Redis si hay variables; si no, archivo local) ----
+const F = __dirname + '/data.json';
+const UR = process.env.UPSTASH_URL, UT = process.env.UPSTASH_TOKEN;
+let db = { users: {}, rooms: {}, tokens: {} }, tm;
+async function load() {
   try {
-    const u = `https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + id)}&format=json`;
-    const txt = await fetchTexto(u);
-    const data = JSON.parse(txt);
-    return { id, titulo: data.title || id, fuente: 'yt' };
-  } catch (e) {
-    return { id, titulo: id, fuente: 'yt' };
-  }
+    if (UR) {
+      const r = await fetch(UR + '/get/db', { headers: { Authorization: 'Bearer ' + UT } });
+      const j = await r.json();
+      if (j.result) return JSON.parse(j.result);
+    } else return JSON.parse(fs.readFileSync(F));
+  } catch (e) {}
+  return null;
+}
+function save() {
+  clearTimeout(tm);
+  tm = setTimeout(() => {
+    const s = JSON.stringify(db);
+    if (UR) fetch(UR + '/set/db', { method: 'POST', headers: { Authorization: 'Bearer ' + UT }, body: s }).catch(() => {});
+    else try { fs.writeFileSync(F, s); } catch (e) {}
+  }, 800);
 }
 
-async function obtenerTitulos(ids) {
-  const unicos = Array.from(new Set((ids || []).filter(Boolean).map(x => String(x).trim()))).slice(0, 200);
-  const res = [];
-  for (let i = 0; i < unicos.length; i += 8) {
-    const parcial = await Promise.all(unicos.slice(i, i + 8).map(obtenerTituloVideo));
-    res.push(...parcial);
-  }
-  return res;
-}
+// ---- Cuentas ----
+const hash = (p, s = crypto.randomBytes(8).toString('hex')) => s + ':' + crypto.scryptSync(p, s, 32).toString('hex');
+const ok = (p, h) => hash(p, h.split(':')[0]) === h;
+const tok = k => { const t = crypto.randomBytes(24).toString('hex'); db.tokens[t] = k; save(); return t; };
+const E = (r, m) => r.status(400).json({ e: m });
 
-function extraerVideosDeObjeto(obj, mapa) {
-  if (!obj || typeof obj !== 'object') return;
-  if (Array.isArray(obj)) {
-    for (const item of obj) extraerVideosDeObjeto(item, mapa);
-    return;
-  }
-  const r = obj.playlistVideoRenderer || obj.playlistPanelVideoRenderer;
-  if (r && r.videoId && !mapa.has(r.videoId)) {
-    const titulo = r.title?.runs?.map(x => x.text).join('') || r.title?.simpleText || r.videoId;
-    mapa.set(r.videoId, { id: r.videoId, titulo, fuente: 'yt' });
-  }
-  for (const k of Object.keys(obj)) extraerVideosDeObjeto(obj[k], mapa);
-}
-
-async function obtenerPlaylist(listId) {
-  if (!listId) return [];
-  try {
-    const html = await fetchTexto(`https://www.youtube.com/playlist?list=${encodeURIComponent(listId)}`);
-    const mapa = new Map();
-    const m1 = html.match(/var ytInitialData\s*=\s*(\{[\s\S]*?\});\s*<\/script>/);
-    const m2 = html.match(/ytInitialData\]\s*=\s*(\{[\s\S]*?\});\s*<\/script>/);
-    const jsonStr = (m1 && m1[1]) || (m2 && m2[1]);
-    if (jsonStr) {
-      try { extraerVideosDeObjeto(JSON.parse(jsonStr), mapa); } catch (e) {}
-    }
-    if (!mapa.size) {
-      const regex = /"videoId":"([\w-]{11})"[\s\S]{0,400}?"title":\{"runs":\[\{"text":"([^"]+)"/g;
-      let match;
-      while ((match = regex.exec(html)) !== null && mapa.size < 500) {
-        const id = match[1];
-        const titulo = match[2].replace(/\\u0026/g, '&').replace(/\\"/g, '"');
-        if (!mapa.has(id)) mapa.set(id, { id, titulo, fuente: 'yt' });
-      }
-    }
-    return Array.from(mapa.values()).slice(0, 500);
-  } catch (e) {
-    return [];
-  }
-}
-
-/* ---------- Socket.IO ---------- */
-io.on('connection', (socket) => {
-  let salaActual = null;
-
-  socket.on('entrar', ({ sala, nombre }) => {
-    const codigo = String(sala || '').trim().replace(/[^\w-]/g, '').slice(0, 30);
-    if (!codigo) return;
-
-    if (salaActual && salaActual.codigo !== codigo) {
-      salaActual.usuarios.delete(socket.id);
-      socket.leave(salaActual.codigo);
-      emitirUsuarios(salaActual);
-    }
-
-    const salaObj = obtenerSala(codigo);
-    salaActual = salaObj;
-    socket.join(codigo);
-
-    const noTieneHost = !Array.from(salaObj.usuarios.values()).some(u => u.host);
-    const nomLimpio = String(nombre || 'Invitado').trim().slice(0, 20) || 'Invitado';
-
-    salaObj.usuarios.set(socket.id, { id: socket.id, nombre: nomLimpio, host: noTieneHost });
-
-    emitirUsuarios(salaObj);
-    emitirLista(salaObj, socket);
-    emitirHistorial(salaObj, socket);
-    emitirEstado(salaObj, socket);
-  });
-
-  socket.on('nombre', (nuevoNombre) => {
-    if (!salaActual) return;
-    const u = salaActual.usuarios.get(socket.id);
-    if (!u) return;
-    const limp = String(nuevoNombre || '').trim().slice(0, 20);
-    if (limp) { u.nombre = limp; emitirUsuarios(salaActual); }
-  });
-
-  socket.on('expulsar', (targetId) => {
-    if (!salaActual || !targetId) return;
-    if (!esHost(salaActual, socket.id)) {
-      return socket.emit('aviso', 'Solo el anfitrión 👑 puede expulsar usuarios');
-    }
-    if (targetId === socket.id) return;
-    const objetivo = salaActual.usuarios.get(targetId);
-    if (!objetivo) return;
-    salaActual.usuarios.delete(targetId);
-    emitirUsuarios(salaActual);
-    io.to(targetId).emit('expulsado');
-    const sObj = io.sockets.sockets.get(targetId);
-    if (sObj) sObj.leave(salaActual.codigo);
-    io.to(salaActual.codigo).emit('aviso', `${objetivo.nombre} fue expulsado de la sala`);
-  });
-
-  socket.on('control', ({ play, t }) => {
-    if (!salaActual) return;
-    const tiempo = typeof t === 'number' && !Number.isNaN(t) ? Math.max(0, t) : tiempoActual(salaActual);
-    salaActual.estado = { ...salaActual.estado, play: Boolean(play), t: tiempo, ts: Date.now() };
-    socket.to(salaActual.codigo).emit('estado', {
-      id: salaActual.estado.id,
-      fuente: normFuente(salaActual.estado.fuente),
-      play: salaActual.estado.play,
-      t: salaActual.estado.t
-    });
-  });
-
-  socket.on('fin', (videoIdTerminado) => {
-    if (!salaActual || !salaActual.items.length) return;
-    let idx = salaActual.pos;
-    if (idx < 0 && videoIdTerminado) {
-      idx = salaActual.items.findIndex(v => v.id === videoIdTerminado);
-    }
-    const siguienteIdx = idx + 1;
-    if (siguienteIdx < salaActual.items.length) {
-      reproducirIndice(salaActual, siguienteIdx);
-    } else {
-      salaActual.estado.play = false;
-      salaActual.estado.t = 0;
-      salaActual.estado.ts = Date.now();
-    }
-  });
-
-  socket.on('cargar', async (payload) => {
-    if (!salaActual || !payload) return;
-    if (typeof payload === 'object') {
-      const id = String(payload.id || '').trim();
-      const fuente = normFuente(payload.fuente);
-      const titulo = payload.titulo || id;
-      if (!id) return;
-      if (fuente !== 'yt') return cargarVideoDirecto(salaActual, id, titulo, fuente);
-      const info = await obtenerTituloVideo(id);
-      return cargarVideoDirecto(salaActual, info.id, info.titulo, 'yt');
-    }
-    const info = await obtenerTituloVideo(String(payload).trim());
-    cargarVideoDirecto(salaActual, info.id, info.titulo, 'yt');
-  });
-
-  socket.on('reproducir', (idx) => {
-    if (!salaActual) return;
-    reproducirIndice(salaActual, Number(idx) || 0);
-  });
-
-  socket.on('siguiente', () => {
-    if (!salaActual || !salaActual.items.length) return;
-    const next = salaActual.pos < 0 ? 0 : (salaActual.pos + 1) % salaActual.items.length;
-    reproducirIndice(salaActual, next);
-  });
-
-  socket.on('mezclar', () => {
-    if (!salaActual || salaActual.items.length < 2) return;
-    const actual = salaActual.pos >= 0 ? salaActual.items[salaActual.pos] : null;
-    for (let i = salaActual.items.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [salaActual.items[i], salaActual.items[j]] = [salaActual.items[j], salaActual.items[i]];
-    }
-    salaActual.pos = actual ? salaActual.items.findIndex(v => v.id === actual.id) : -1;
-    emitirLista(salaActual);
-    socket.emit('aviso', 'Lista mezclada');
-  });
-
-  socket.on('vaciar', () => {
-    if (!salaActual) return;
-    salaActual.items = [];
-    salaActual.pos = -1;
-    emitirLista(salaActual);
-    socket.emit('aviso', 'Lista vaciada');
-  });
-
-  socket.on('quitar', (idx) => {
-    if (!salaActual) return;
-    const i = Number(idx);
-    if (i < 0 || i >= salaActual.items.length) return;
-    salaActual.items.splice(i, 1);
-    if (salaActual.items.length === 0) salaActual.pos = -1;
-    else if (i < salaActual.pos) salaActual.pos--;
-    else if (i === salaActual.pos) salaActual.pos = Math.min(salaActual.pos, salaActual.items.length - 1);
-    emitirLista(salaActual);
-  });
-
-  socket.on('renombrar', ({ i, titulo }) => {
-    if (!salaActual) return;
-    const idx = Number(i);
-    const nuevo = String(titulo || '').trim().slice(0, 120);
-    if (idx < 0 || idx >= salaActual.items.length || !nuevo) return;
-    salaActual.items[idx].titulo = nuevo;
-    emitirLista(salaActual);
-  });
-
-  socket.on('agregar', async (payload) => {
-    if (!salaActual || !payload) return;
-    if (typeof payload === 'object') {
-      const id = String(payload.id || '').trim();
-      const fuente = normFuente(payload.fuente);
-      const titulo = String(payload.titulo || id).trim().slice(0, 140);
-      if (!id) return;
-      salaActual.items.push({ id, titulo, fuente });
-      emitirLista(salaActual);
-      return socket.emit('aviso', 'Añadido a la lista');
-    }
-    const info = await obtenerTituloVideo(String(payload).trim());
-    salaActual.items.push({ id: info.id, titulo: info.titulo, fuente: 'yt' });
-    emitirLista(salaActual);
-    socket.emit('aviso', 'Añadido a la lista');
-  });
-
-  socket.on('importar', (listaVideos, ack) => {
-    if (!salaActual || !Array.isArray(listaVideos)) {
-      if (typeof ack === 'function') ack();
-      return;
-    }
-    const limpios = listaVideos
-      .filter(v => v && v.id)
-      .slice(0, 500)
-      .map(v => ({
-        id: String(v.id).trim(),
-        titulo: String(v.titulo || v.id).trim().slice(0, 140),
-        fuente: normFuente(v.fuente)
-      }));
-    salaActual.items.push(...limpios);
-    emitirLista(salaActual);
-    socket.emit('aviso', `Se importaron ${limpios.length} videos`);
-    if (typeof ack === 'function') ack();
-  });
-
-  socket.on('titulos', async (ids, ack) => {
-    const res = await obtenerTitulos(Array.isArray(ids) ? ids : []);
-    if (typeof ack === 'function') ack(res);
-  });
-
-  socket.on('playlist', async (listId, ack) => {
-    const res = await obtenerPlaylist(String(listId || '').trim());
-    if (typeof ack === 'function') ack(res);
-  });
-
-  socket.on('chat', (texto) => {
-    if (!salaActual) return;
-    const u = salaActual.usuarios.get(socket.id);
-    const limpio = String(texto || '').trim().slice(0, 500);
-    if (!limpio) return;
-    io.to(salaActual.codigo).emit('chat', {
-      nombre: u ? u.nombre : 'Invitado',
-      texto: limpio
-    });
-  });
-
-  socket.on('sugerir', (video) => {
-    if (!salaActual || !video || !video.id) return;
-    const u = salaActual.usuarios.get(socket.id);
-    io.to(salaActual.codigo).emit('chatVideo', {
-      nombre: u ? u.nombre : 'Invitado',
-      id: String(video.id),
-      titulo: String(video.titulo || video.id),
-      fuente: normFuente(video.fuente)
-    });
-  });
-
-  socket.on('senal', ({ para, tipo, datos }) => {
-    if (!para || !tipo) return;
-    io.to(para).emit('senal', { de: socket.id, tipo, datos });
-  });
-
-  socket.on('disconnect', () => {
-    if (!salaActual) return;
-    const eraHost = salaActual.usuarios.get(socket.id)?.host;
-    salaActual.usuarios.delete(socket.id);
-
-    if (salaActual.usuarios.size === 0) {
-      salas.delete(salaActual.codigo);
-      return;
-    }
-
-    if (eraHost) {
-      const siguiente = salaActual.usuarios.values().next().value;
-      if (siguiente) siguiente.host = true;
-    }
-    emitirUsuarios(salaActual);
-  });
+app.post('/api/register', (q, r) => {
+  const u = String(q.body.u || ''), p = String(q.body.p || '');
+  if (!/^[\w.-]{3,20}$/.test(u) || p.length < 4) return E(r, 'Usuario: 3-20 letras o números. Clave: mínimo 4.');
+  const k = u.toLowerCase();
+  if (db.users[k]) return E(r, 'Ese usuario ya existe');
+  db.users[k] = { n: u, h: hash(p), rooms: [] };
+  r.json({ t: tok(k), n: u });
+});
+app.post('/api/login', (q, r) => {
+  const k = String(q.body.u || '').toLowerCase(), x = db.users[k];
+  if (!x || !ok(String(q.body.p || ''), x.h)) return E(r, 'Usuario o clave incorrectos');
+  r.json({ t: tok(k), n: x.n });
 });
 
-server.listen(PORT, () => {
-  console.log(`Cine2Gether escuchando en el puerto ${PORT}`);
+// ---- Salas ----
+io.use((s, n) => {
+  const k = db.tokens[s.handshake.auth.t];
+  if (!k || !db.users[k]) return n(new Error('auth'));
+  s.k = k; n();
 });
+const members = id => [...(io.sockets.adapter.rooms.get(id) || [])];
+const people = id => {
+  const seen = new Set(), rm = db.rooms[id];
+  return members(id).map(i => io.sockets.sockets.get(i)).filter(x => x && !seen.has(x.k) && seen.add(x.k))
+    .map(x => ({ n: db.users[x.k].n, o: x.k === rm.owner }));
+};
+const pub = id => { const r = db.rooms[id]; return { id, name: r.name, priv: r.priv, n: people(id).length }; };
+
+io.on('connection', s => {
+  const me = () => db.users[s.k];
+  const rm = () => db.rooms[s.room];
+  const q = () => io.to(s.room).emit('q', { q: rm().q, cur: rm().cur });
+  const go = i => {
+    const r = rm();
+    if (!r || i < 0 || i >= r.q.length) return;
+    r.cur = i; r.st = { playing: true, t: 0, at: Date.now() };
+    save(); io.to(s.room).emit('go', { cur: i });
+  };
+
+  s.on('my', a => a(me().rooms.filter(i => db.rooms[i]).map(i => ({ ...pub(i), own: db.rooms[i].owner === s.k }))));
+
+  s.on('create', (d, a) => {
+    if (d.priv && !String(d.pass || '').trim()) return a({ e: 'Pon una clave para la sala privada' });
+    const id = crypto.randomBytes(3).toString('hex').toUpperCase();
+    db.rooms[id] = {
+      name: String(d.name || 'Sala').slice(0, 30), owner: s.k, priv: !!d.priv,
+      pass: d.priv ? hash(String(d.pass)) : '', q: [], cur: -1, st: { playing: false, t: 0, at: Date.now() }
+    };
+    me().rooms.push(id); save(); a({ id });
+  });
+
+  s.on('join', (d, a) => {
+    const id = String(d.id || '').toUpperCase(), r = db.rooms[id];
+    if (!r) return a({ e: 'No existe esa sala' });
+    const mine = me().rooms.includes(id);
+    if (r.priv && !mine && !(d.pass && ok(String(d.pass), r.pass))) return a({ e: 'Clave incorrecta' });
+    if (!mine) { me().rooms.push(id); save(); }
+    if (s.room) s.leave(s.room);
+    s.join(id); s.room = id;
+    const t = r.st.t + (r.st.playing ? (Date.now() - r.st.at) / 1000 : 0);
+    a({ id, name: r.name, own: r.owner === s.k, q: r.q, cur: r.cur, st: { playing: r.st.playing, t } });
+    io.to(id).emit('ppl', people(id));
+  });
+
+  s.on('chat', m => { if (rm()) io.to(s.room).emit('chat', { n: me().n, m: String(m).slice(0, 500) }); });
+
+  s.on('add', (items, p) => {
+    const r = rm();
+    if (!r || !Array.isArray(items)) return;
+    const n0 = r.q.length;
+    for (const x of items) if (r.q.length < 5000) r.q.push({ id: String(x.id).slice(0, 11), t: String(x.t || '').slice(0, 100) });
+    save(); q();
+    if (r.q.length > n0 && (p || r.cur < 0)) go(n0);
+  });
+
+  s.on('play', go);
+  s.on('next', from => { const r = rm(); if (r && r.cur === from) go(r.cur + 1); });
+
+  s.on('rm', i => {
+    const r = rm();
+    if (!r || !r.q[i]) return;
+    const was = i === r.cur;
+    r.q.splice(i, 1);
+    if (i < r.cur) r.cur--;
+    save(); q();
+    if (was) r.q.length ? go(Math.min(i, r.q.length - 1)) : (r.cur = -1);
+  });
+
+  s.on('st', d => {
+    const r = rm();
+    if (!r) return;
+    r.st = { playing: !!d.playing, t: +d.t || 0, at: Date.now() };
+    s.to(s.room).emit('st', r.st);
+  });
+
+  s.on('ti', d => {
+    const r = rm();
+    if (r && r.q[d.i] && !r.q[d.i].t) { r.q[d.i].t = String(d.t).slice(0, 100); save(); q(); }
+  });
+
+  s.on('del', id => {
+    const r = db.rooms[id];
+    if (r && r.owner === s.k) {
+      io.to(id).emit('gone');
+      delete db.rooms[id];
+      for (const u of Object.values(db.users)) u.rooms = u.rooms.filter(x => x !== id);
+      save();
+    }
+  });
+
+  s.on('out', () => { const id = s.room; if (id) { s.leave(id); s.room = null; io.to(id).emit('ppl', people(id)); } });
+  s.on('disconnect', () => { if (s.room && db.rooms[s.room]) io.to(s.room).emit('ppl', people(s.room)); });
+});
+
+(async () => {
+  const d = await load();
+  if (d) db = { users: d.users || {}, rooms: d.rooms || {}, tokens: d.tokens || {} };
+  srv.listen(process.env.PORT || 3000, () => console.log('Listo'));
+})();
