@@ -28,24 +28,17 @@ function save() {
   }, 800);
 }
 
-// ---- Cuentas ----
+// ---- Invitados (sin usuario ni clave) ----
 const hash = (p, s = crypto.randomBytes(8).toString('hex')) => s + ':' + crypto.scryptSync(p, s, 32).toString('hex');
 const ok = (p, h) => !!h && hash(p, h.split(':')[0]) === h;
 const tok = k => { const t = crypto.randomBytes(24).toString('hex'); db.tokens[t] = k; save(); return t; };
-const E = (r, m) => r.status(400).json({ e: m });
 
-app.post('/api/register', (q, r) => {
-  const u = String(q.body.u || ''), p = String(q.body.p || '');
-  if (!/^[\w.-]{3,20}$/.test(u) || p.length < 4) return E(r, 'Usuario: 3-20 letras o números. Clave: mínimo 4.');
-  const k = u.toLowerCase();
-  if (db.users[k]) return E(r, 'Ese usuario ya existe');
-  db.users[k] = { n: u, h: hash(p), rooms: [] };
-  r.json({ t: tok(k), n: u });
-});
-app.post('/api/login', (q, r) => {
-  const k = String(q.body.u || '').toLowerCase(), x = db.users[k];
-  if (!x || !ok(String(q.body.p || ''), x.h)) return E(r, 'Usuario o clave incorrectos');
-  r.json({ t: tok(k), n: x.n });
+app.post('/api/guest', (q, r) => {
+  if (Object.keys(db.users).length > 5000) return r.status(400).json({ e: 'Hay demasiados usuarios, intenta más tarde' });
+  const n = String(q.body.n || '').trim().slice(0, 20) || ('Invitado' + Math.floor(1000 + Math.random() * 9000));
+  const k = 'u:' + crypto.randomBytes(8).toString('hex');
+  db.users[k] = { n, h: '', rooms: [] };
+  r.json({ t: tok(k), n });
 });
 
 // ---- Salas ----
@@ -72,6 +65,14 @@ io.on('connection', s => {
     r.cur = i; r.st = { playing: true, t: 0, at: Date.now() };
     save(); io.to(s.room).emit('go', { cur: i });
   };
+
+  s.on('name', (n, a) => {
+    n = String(n || '').trim().slice(0, 20);
+    if (!n) return a && a({ e: 1 });
+    me().n = n; save();
+    if (s.room && db.rooms[s.room]) io.to(s.room).emit('ppl', people(s.room));
+    a && a({ n });
+  });
 
   s.on('my', a => a(me().rooms.filter(i => db.rooms[i]).map(i => ({ ...pub(i), own: db.rooms[i].owner === s.k }))));
 
