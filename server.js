@@ -32,13 +32,39 @@ function save() {
 const hash = (p, s = crypto.randomBytes(8).toString('hex')) => s + ':' + crypto.scryptSync(p, s, 32).toString('hex');
 const ok = (p, h) => !!h && hash(p, h.split(':')[0]) === h;
 const tok = k => { const t = crypto.randomBytes(24).toString('hex'); db.tokens[t] = k; save(); return t; };
+const E = (r, m) => r.status(400).json({ e: m });
 
 app.post('/api/guest', (q, r) => {
-  if (Object.keys(db.users).length > 5000) return r.status(400).json({ e: 'Hay demasiados usuarios, intenta más tarde' });
+  if (Object.keys(db.users).length > 5000) return E(r, 'Hay demasiados usuarios, intenta más tarde');
   const n = String(q.body.n || '').trim().slice(0, 20) || ('Invitado' + Math.floor(1000 + Math.random() * 9000));
   const k = 'u:' + crypto.randomBytes(8).toString('hex');
   db.users[k] = { n, h: '', rooms: [] };
   r.json({ t: tok(k), n });
+});
+
+// ---- Listas de YouTube completas (necesita YOUTUBE_API_KEY) ----
+app.get('/api/playlist', async (q, r) => {
+  const key = process.env.YOUTUBE_API_KEY, list = String(q.query.list || '');
+  if (!db.tokens[q.headers['x-t']]) return E(r, 'Sin sesión');
+  if (!key) return r.json({ nokey: true });
+  if (!/^[\w-]+$/.test(list)) return E(r, 'Lista no válida');
+  const items = [];
+  let page = '';
+  try {
+    do {
+      const u = 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=' + list +
+        '&key=' + key + (page ? '&pageToken=' + page : '');
+      const j = await (await fetch(u)).json();
+      if (j.error) return E(r, j.error.code === 404 ? 'No encontré esa lista (¿es privada?)' : 'YouTube dijo: ' + String(j.error.message || '').slice(0, 80));
+      for (const x of j.items || []) {
+        const s = x.snippet;
+        if (s && s.resourceId && s.title !== 'Private video' && s.title !== 'Deleted video')
+          items.push({ id: s.resourceId.videoId, t: String(s.title).slice(0, 100) });
+      }
+      page = j.nextPageToken || '';
+    } while (page && items.length < 2000);
+    r.json({ items });
+  } catch (e) { E(r, 'No pude leer la lista'); }
 });
 
 // ---- Salas ----
