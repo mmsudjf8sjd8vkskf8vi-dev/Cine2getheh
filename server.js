@@ -48,18 +48,6 @@ app.post('/api/login', (q, r) => {
   r.json({ t: tok(k), n: x.n });
 });
 
-// ---- Google ----
-app.get('/api/cfg', (q, r) => r.json({ g: process.env.GOOGLE_CLIENT_ID || '' }));
-app.post('/api/google', async (q, r) => {
-  try {
-    const x = await (await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(String(q.body.c || '')))).json();
-    if (!x.sub || x.aud !== process.env.GOOGLE_CLIENT_ID) return E(r, 'Google no pudo verificar tu cuenta');
-    const k = 'g:' + x.sub, n = String(x.given_name || x.name || 'Usuario').slice(0, 20);
-    if (!db.users[k]) db.users[k] = { n, h: '', rooms: [] };
-    r.json({ t: tok(k), n: db.users[k].n });
-  } catch (e) { E(r, 'Error con Google'); }
-});
-
 // ---- Salas ----
 io.use((s, n) => {
   const k = db.tokens[s.handshake.auth.t];
