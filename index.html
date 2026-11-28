@@ -236,8 +236,21 @@ function addLink(){
   const l=v.match(/[?&]list=([\w-]+)/),i=v.match(ID);
   if(l)imp(l[1]);else if(i)S.emit('add',[{id:i[1],t:''}]);else toast('Enlace no válido');
 }
-function imp(list){
+async function imp(list){
   toast('Importando lista…');
+  try{
+    const r=await fetch('/api/playlist?list='+encodeURIComponent(list),{headers:{'x-t':localStorage.t}});
+    const j=await r.json();
+    if(j.e)return toast(j.e);
+    if(!j.nokey){
+      if(!j.items.length)return toast('La lista está vacía');
+      S.emit('add',j.items);
+      return toast(j.items.length+' videos añadidos');
+    }
+  }catch(e){}
+  impViejo(list);
+}
+function impViejo(list){
   const d=document.createElement('div');$('hid').appendChild(d);
   new YT.Player(d,{width:'10',height:'10',playerVars:{listType:'playlist',list},events:{onReady:e=>{
     let n=0;
@@ -245,7 +258,7 @@ function imp(list){
       const a=e.target.getPlaylist();
       if((a&&a.length)||++n>20){
         clearInterval(iv);e.target.destroy();
-        if(a&&a.length){S.emit('add',a.map(id=>({id,t:''})));toast(a.length+' videos añadidos')}
+        if(a&&a.length){S.emit('add',a.map(id=>({id,t:''})));toast(a.length+' videos añadidos (máximo 200 sin clave de YouTube)')}
         else toast('No pude leer la lista (¿es privada?)');
       }
     },500);
