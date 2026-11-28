@@ -21,9 +21,10 @@ button{background:#2b3648;color:#fff}
 #lobby{height:100%;overflow-y:auto}
 
 /* Sala */
-#sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto}
+#sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto;position:relative}
 #vbox{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex:none}
 #vbox.mini{position:fixed;right:8px;bottom:8px;width:55%;max-width:320px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #000a}
+#vbox.fullFallback{position:fixed;inset:0;width:100vw;height:100vh;aspect-ratio:auto;z-index:95}
 #player,#extFrame{width:100%;height:100%;border:0}
 #extBar{position:absolute;top:6px;left:6px;right:6px;display:flex;align-items:center;gap:6px;background:rgba(11,15,25,.82);padding:4px 8px;border-radius:8px;z-index:5}
 #extBar span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
@@ -34,21 +35,43 @@ button{background:#2b3648;color:#fff}
 .tbadge.mplay{background:#ca8a04;color:#000}
 .tbadge.archive{background:#0d9488}
 .tbadge.plex{background:#d97706;color:#000}
-#ctl{display:flex;align-items:center;gap:6px;background:#0b0f19;padding:2px 8px;flex:none}
-#ctl button{background:none;padding:8px;font-size:18px}
-#tiempo{font-size:14px;min-width:46px}
-#seek{flex:1;padding:0;accent-color:#fbbf24;background:none;height:24px}
+
+#ctl{display:flex;align-items:center;gap:4px;background:#0b0f19;padding:2px 6px;flex:none;flex-wrap:nowrap}
+#ctl button{background:none;padding:7px 8px;font-size:16px;flex:none}
+#ctl .qbtn{font-size:12px;padding:5px 7px;background:#1f2937;border-radius:6px;color:#fbbf24;font-weight:bold}
+#tiempo{font-size:13px;min-width:44px;flex:none}
+#seek{flex:1;min-width:40px;padding:0;accent-color:#fbbf24;background:none;height:24px}
+
 #tb{display:flex;align-items:center;gap:4px;padding:4px 10px;flex:none}
 #tb .sp{flex:1}
 #tb button{background:none;padding:8px 10px;font-size:17px}
-#tb button.vipOn{background:#fbbf24;color:#000;border-radius:8px;font-size:13px;font-weight:bold;padding:6px 10px}
+#tb button.onModo{background:#fbbf24;color:#000;border-radius:8px}
 #salaNombre{font-size:17px}
+
 #pages{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 #pages::-webkit-scrollbar{display:none}
 .pg{flex:0 0 100%;min-width:0;display:flex;flex-direction:column;overflow-y:auto;scroll-snap-align:start;padding:6px 12px}
 #dots{display:flex;justify-content:center;gap:10px;padding:8px;flex:none}
 #dots i{width:9px;height:9px;border-radius:50%;background:#4b5563;display:block}
 #dots i.on{background:#fff}
+
+/* Modo "como jugando" */
+#sala.gaming #vbox{flex:1;aspect-ratio:auto;width:100%;min-height:0}
+#sala.gaming #pages,
+#sala.gaming #dots{
+  position:fixed;
+  left:10px;
+  right:10px;
+  max-width:460px;
+  margin:auto;
+  z-index:40;
+  background:rgba(17,24,39,.78);
+  backdrop-filter:blur(4px);
+  border-radius:12px;
+}
+#sala.gaming #pages{bottom:44px;height:34vh;max-height:260px}
+#sala.gaming #dots{bottom:10px;padding:5px;width:fit-content}
+#sala.gaming .acciones{background:rgba(17,24,39,.9)}
 
 /* Personas */
 #tiles{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
@@ -161,14 +184,17 @@ button{background:#2b3648;color:#fff}
     <button id="bPlay" onclick="playPausa()">▶</button>
     <span id="tiempo">00:00</span>
     <input type="range" id="seek" min="0" max="100" step="0.1" value="0">
-    <button onclick="velocidad()">⚙</button>
-    <button id="bVol" onclick="volumen()">🔊</button>
+    <button class="qbtn" id="bCal" onclick="ciclarCalidad()" title="Calidad de video">Auto</button>
+    <button onclick="velocidad()" title="Velocidad">⚙</button>
+    <button id="bVol" onclick="volumen()" title="Volumen">🔊</button>
+    <button onclick="forzarSync()" title="Sincronizar ahora">🔄</button>
+    <button id="bFull" onclick="pantallaCompleta()" title="Pantalla completa">⛶</button>
   </div>
   <div id="tb">
     <span id="salaNombre"></span><span class="sp"></span>
-    <button id="bVip" onclick="socket.emit('toggleVip')" title="Modo VIP">VIP</button>
-    <button onclick="abrirBuscador()">🔍</button>
-    <button onclick="ajustes()">⚙</button>
+    <button id="bGame" onclick="modoJuego()" title="Modo como jugando">🎮</button>
+    <button onclick="abrirBuscador()" title="Buscar">🔍</button>
+    <button onclick="ajustes()" title="Ajustes">⚙</button>
   </div>
 
   <div id="pages">
@@ -287,12 +313,20 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const socket = io();
 let yt, listo = false, ignorar = false, pendiente = null;
-let miId = null, sala = '', nombre = '', usuarios = [], camara = null, vipActivo = false;
-let fuenteActual = 'yt', appActual = null;
+let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
+let fuenteActual = 'yt', appActual = null, ultimoEstado = null;
 let listaActual = [], posActual = -1, resultados = [], resEsLista = false;
-let importando = false, arrastrando = false, zoom = 150, tToast, velIdx = 0;
+let importando = false, arrastrando = false, zoom = 150, tToast, velIdx = 0, calIdx = 0;
+let modoGaming = false, fullRespaldo = false;
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const CALIDADES = [
+  { code: 'default', label: 'Auto' },
+  { code: 'hd1080', label: '1080p' },
+  { code: 'hd720', label: '720p' },
+  { code: 'large', label: '480p' },
+  { code: 'medium', label: '360p' }
+];
 
 const APPS_META = {
   tubi: { label: 'TUBI', home: 'https://tubitv.com', pathPrefix: 'https://tubitv.com/movies/' },
@@ -307,7 +341,7 @@ function aviso(t) {
   const x = $('toast');
   x.textContent = t; x.style.display = 'block';
   clearTimeout(tToast);
-  tToast = setTimeout(() => x.style.display = 'none', 3500);
+  tToast = setTimeout(() => x.style.display = 'none', 3200);
 }
 socket.on('aviso', aviso);
 socket.on('expulsado', () => {
@@ -360,6 +394,38 @@ function ajustes() {
   }
 }
 socket.on('connect', () => { miId = socket.id; if (sala) socket.emit('entrar', { sala, nombre }); });
+
+/* ---------- Pantalla completa y modo "como jugando" ---------- */
+function modoJuego() {
+  modoGaming = !modoGaming;
+  $('sala').classList.toggle('gaming', modoGaming);
+  $('bGame').classList.toggle('onModo', modoGaming);
+  aviso(modoGaming ? 'Modo juego activado' : 'Modo juego desactivado');
+}
+
+async function pantallaCompleta() {
+  const box = $('vbox');
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    if (box.requestFullscreen) {
+      await box.requestFullscreen();
+      return;
+    }
+  } catch (e) {}
+  fullRespaldo = !fullRespaldo;
+  box.classList.toggle('fullFallback', fullRespaldo);
+  aviso(fullRespaldo ? 'Pantalla completa activada' : 'Pantalla completa cerrada');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && fullRespaldo) {
+    fullRespaldo = false;
+    $('vbox').classList.remove('fullFallback');
+  }
+});
 
 /* ---------- Pantallas deslizables ---------- */
 const pgs = $('pages');
@@ -447,29 +513,16 @@ function mostrarModoFuente(fuente, id, titulo) {
   }
 }
 
-function cerrarAppEmbed() {
-  mostrarModoFuente('yt', null, null);
-}
-function abrirAppNuevaPestana() {
-  if (!appActual) return;
-  window.open(appActual.url, '_blank', 'noopener');
-}
+function cerrarAppEmbed() { mostrarModoFuente('yt', null, null); }
+function abrirAppNuevaPestana() { if (appActual) window.open(appActual.url, '_blank', 'noopener'); }
 
 function datosAppInput() {
   const fuente = $('appSel').value;
   const raw = $('appUrl').value.trim();
   const parsed = parseAppItem(raw || APPS_META[fuente].home, fuente);
-  if (!parsed) {
-    aviso('Ingresa un enlace o ID válido');
-    return null;
-  }
+  if (!parsed) { aviso('Ingresa un enlace o ID válido'); return null; }
   const customTit = $('appTit').value.trim();
-  return {
-    id: parsed.id,
-    url: parsed.url,
-    titulo: customTit || parsed.titulo,
-    fuente
-  };
+  return { id: parsed.id, url: parsed.url, titulo: customTit || parsed.titulo, fuente };
 }
 function cargarAppInput() {
   const d = datosAppInput();
@@ -483,8 +536,7 @@ function cargarDirectoApp(fuente, url, titulo) {
 }
 function agregarAppInput() {
   const d = datosAppInput();
-  if (!d) return;
-  socket.emit('agregar', { id: d.id, titulo: d.titulo, fuente: d.fuente });
+  if (d) socket.emit('agregar', { id: d.id, titulo: d.titulo, fuente: d.fuente });
 }
 function sugerirAppInput() {
   const d = datosAppInput();
@@ -493,19 +545,41 @@ function sugerirAppInput() {
   aviso('Sugerencia enviada al chat');
 }
 
-/* ---------- Reproductor YouTube + barra de control ---------- */
+/* ---------- Reproductor YouTube, calidad y sincronización ---------- */
+function aplicarCalidadActual() {
+  if (!listo || !yt || !yt.setPlaybackQuality || fuenteActual !== 'yt') return;
+  const c = CALIDADES[calIdx] || CALIDADES[0];
+  try { yt.setPlaybackQuality(c.code); } catch (e) {}
+  $('bCal').textContent = c.label;
+}
+
+function ciclarCalidad() {
+  calIdx = (calIdx + 1) % CALIDADES.length;
+  aplicarCalidadActual();
+  aviso('Calidad solicitada: ' + CALIDADES[calIdx].label);
+}
+
 function crearPlayer() {
   if (yt || !window.YT || !YT.Player || $('sala').hidden) return;
   yt = new YT.Player('player', {
     width: '100%', height: '100%',
     playerVars: { playsinline: 1, controls: 0, rel: 0, modestbranding: 1, disablekb: 1 },
     events: {
-      onReady: () => { listo = true; if (pendiente) aplicar(pendiente); },
-      onError: () => { aviso('Video no disponible aquí, saltando…'); socket.emit('fin', yt.getVideoData().video_id); },
+      onReady: () => {
+        listo = true;
+        aplicarCalidadActual();
+        if (pendiente) aplicar(pendiente);
+      },
+      onError: () => {
+        aviso('Video no disponible aquí, saltando…');
+        socket.emit('fin', yt.getVideoData().video_id);
+      },
       onStateChange: (e) => {
         if (ignorar || fuenteActual !== 'yt') return;
         if (e.data === 0) { socket.emit('fin', yt.getVideoData().video_id); return; }
-        if (e.data === 1 || e.data === 2) socket.emit('control', { play: e.data === 1, t: yt.getCurrentTime() });
+        if (e.data === 1 || e.data === 2) {
+          socket.emit('control', { play: e.data === 1, t: yt.getCurrentTime() });
+        }
       }
     }
   });
@@ -517,12 +591,8 @@ function idDe(url) {
   return m ? m[1] : null;
 }
 
-function aplicar(e) {
-  if (typeof e.vip === 'boolean') {
-    vipActivo = e.vip;
-    $('bVip').classList.toggle('vipOn', vipActivo);
-    $('bVip').textContent = vipActivo ? 'VIP ON' : 'VIP';
-  }
+function aplicar(e, forzarAjuste = false) {
+  ultimoEstado = { ...e, recibidoEn: Date.now() };
   const f = e.fuente && e.fuente !== 'yt' ? e.fuente : 'yt';
   if (f !== 'yt' && e.id) {
     pendiente = null;
@@ -534,18 +604,47 @@ function aplicar(e) {
   if (!listo) { pendiente = e; return; }
   pendiente = null;
   if (!e.id) return;
+
   ignorar = true;
+  aplicarCalidadActual();
   const actual = yt.getVideoData && yt.getVideoData().video_id;
   if (actual !== e.id) {
     yt.loadVideoById(e.id, e.t);
-    if (!e.play) setTimeout(() => yt.pauseVideo(), 500);
+    if (!e.play) setTimeout(() => yt.pauseVideo(), 450);
   } else {
-    if (Math.abs(yt.getCurrentTime() - e.t) > 1.5) yt.seekTo(e.t, true);
-    e.play ? yt.playVideo() : yt.pauseVideo();
+    const diff = Math.abs((yt.getCurrentTime() || 0) - (e.t || 0));
+    if (forzarAjuste || diff > 0.8) yt.seekTo(e.t || 0, true);
+    const st = yt.getPlayerState();
+    if (e.play && st !== 1) yt.playVideo();
+    if (!e.play && st === 1) yt.pauseVideo();
   }
-  setTimeout(() => ignorar = false, 1500);
+  setTimeout(() => { ignorar = false; }, 900);
 }
-socket.on('estado', aplicar);
+socket.on('estado', (e) => aplicar(e, false));
+
+function forzarSync() {
+  if (fuenteActual !== 'yt') {
+    if (appActual) $('extFrame').src = resolverEmbedUrl(appActual.fuente, appActual.id).embedUrl;
+    return aviso('Recargando vista');
+  }
+  if (!ultimoEstado || !ultimoEstado.id) return;
+  const extra = ultimoEstado.play ? ((Date.now() - (ultimoEstado.recibidoEn || Date.now())) / 1000) : 0;
+  aplicar({ ...ultimoEstado, t: Math.max(0, (ultimoEstado.t || 0) + extra) }, true);
+  aviso('Sincronizado con la sala');
+}
+
+/* Ajuste periódico suave para mantener todos en el mismo segundo */
+setInterval(() => {
+  if (!listo || !yt || !yt.getPlayerState || fuenteActual !== 'yt' || !ultimoEstado || !ultimoEstado.id) return;
+  if (!ultimoEstado.play || yt.getPlayerState() !== 1) return;
+  const esperado = Math.max(0, (ultimoEstado.t || 0) + ((Date.now() - (ultimoEstado.recibidoEn || Date.now())) / 1000));
+  const actual = yt.getCurrentTime() || 0;
+  if (Math.abs(esperado - actual) > 1.4) {
+    ignorar = true;
+    yt.seekTo(esperado, true);
+    setTimeout(() => { ignorar = false; }, 600);
+  }
+}, 4000);
 
 const fmt = (s) => { s = Math.floor(s || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
 setInterval(() => {
