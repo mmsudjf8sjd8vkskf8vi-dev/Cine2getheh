@@ -7,55 +7,80 @@
 <style>
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-:root{--t:150px}
+:root{--t:146px}
 html,body{margin:0;height:100%}
-body{background:#111827;color:#e5e7eb;font-family:sans-serif;overflow:hidden}
-button,input,select{font-size:16px;border:0;border-radius:8px;padding:12px;font-family:inherit}
-input,select{background:#1f2937;color:#fff;width:100%}
-button{background:#2b3648;color:#fff}
-.am{background:#fbbf24;color:#000;font-weight:bold}
+body{background:#111622;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button,input,select{font-size:15px;border:0;border-radius:8px;padding:11px 12px;font-family:inherit}
+input,select{background:#1c2333;color:#fff;width:100%;border:1px solid #2b354b}
+button{background:#252f44;color:#e5e7eb;cursor:pointer}
+.am{background:#f5b81c;color:#111318;font-weight:700}
+.az{background:#2563eb;color:#fff;font-weight:700}
 .gris{color:#9ca3af}
-.caja{padding:14px;max-width:700px;margin:auto}
-.logo{font-size:26px;font-weight:bold}.logo b{color:#fbbf24}
-.salaItem{background:#1f2937;border-radius:10px;padding:16px;margin:8px 0}
-#lobby{height:100%;overflow-y:auto}
+
+/* Lobby estilo W2G */
+#lobby{height:100%;overflow-y:auto;background:#111622}
+.w2g-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1e2638;background:#151c2c}
+.w2g-brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+.w2g-mark{background:#f5b81c;color:#111318;padding:4px 8px;border-radius:8px;font-size:18px;font-weight:900}
+.w2g-nick-pill{display:flex;align-items:center;gap:8px;background:#222b3f;padding:6px 12px;border-radius:999px;font-size:14px;font-weight:600}
+.w2g-wrap{max-width:680px;margin:auto;padding:16px}
+.w2g-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.w2g-hdr h2{margin:0;font-size:21px;font-weight:700}
+.w2g-act{display:flex;gap:8px;align-items:center}
+.w2g-btn-sm{background:#222b3f;color:#e5e7eb;padding:9px 14px;border-radius:8px;font-size:14px;font-weight:600}
+.w2g-icon-btn{background:#222b3f;color:#e5e7eb;width:38px;height:38px;padding:0;border-radius:8px;font-size:18px}
+.salaItem{display:flex;align-items:center;justify-content:space-between;background:#1a2234;border:1px solid #263149;border-radius:10px;padding:14px 16px;margin:8px 0;font-size:16px}
+.salaItem small{color:#9ca3af;display:block;font-size:12px;margin-top:3px}
+
+/* Tarjeta de bienvenida al entrar */
+#joinCard{position:fixed;inset:0;background:rgba(10,14,22,.72);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:60}
+.join-box{width:100%;max-width:420px;background:#1a2234;border:1px solid #2b3752;border-radius:14px;padding:24px 20px;text-align:center;box-shadow:0 16px 40px #0009}
+.join-box h3{margin:0 0 18px;font-size:21px;font-weight:700;color:#f3f4f6}
+.join-box label{display:block;text-align:left;font-size:14px;color:#cbd5e1;margin-bottom:8px;font-weight:600}
+.join-box input{margin-bottom:16px;padding:12px 14px;font-size:16px;background:#121826;border-color:#2e3b57}
+.join-box .az{width:100%;padding:13px;font-size:16px;border-radius:8px}
 
 /* Sala */
-#sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto;position:relative}
+#sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto;position:relative;background:#111622}
 #vbox{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex:none}
-#vbox.mini{position:fixed;right:8px;bottom:8px;width:55%;max-width:320px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #000a}
-#vbox.pipFlotante{position:fixed;right:10px;top:10px;width:54%;max-width:280px;z-index:85;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px #000c;border:1px solid rgba(255,255,255,.15)}
+#vbox.mini{position:fixed;right:8px;bottom:8px;width:54%;max-width:300px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 6px 20px #000b}
+#vbox.pipFlotante{position:fixed;right:10px;top:10px;width:54%;max-width:270px;z-index:85;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px #000c;border:1px solid rgba(255,255,255,.16)}
 #vbox.fullFallback{position:fixed;inset:0;width:100vw;height:100vh;aspect-ratio:auto;z-index:95}
+#pipCerrar{display:none;position:absolute;top:6px;left:6px;z-index:20;background:rgba(11,15,25,.85);color:#fff;font-size:13px;padding:4px 8px;border-radius:6px}
+#vbox.pipFlotante #pipCerrar{display:block}
 #player,#extFrame{width:100%;height:100%;border:0}
-#extBar{position:absolute;top:6px;left:6px;right:6px;display:flex;align-items:center;gap:6px;background:rgba(11,15,25,.82);padding:4px 8px;border-radius:8px;z-index:5}
+#pipAviso{background:#161d2e;border-bottom:1px solid #242f47;padding:10px 12px;text-align:center;font-size:13px;color:#cbd5e1;flex:none}
+#extBar{position:absolute;top:6px;left:6px;right:6px;display:flex;align-items:center;gap:6px;background:rgba(11,15,25,.84);padding:4px 8px;border-radius:8px;z-index:5}
 #extBar span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 #extBar button{font-size:12px;padding:4px 8px;border-radius:6px;flex:none}
-#unmuteBtn{position:absolute;right:10px;bottom:10px;z-index:12;background:#fbbf24;color:#000;font-weight:bold;font-size:13px;padding:7px 12px;border-radius:8px;box-shadow:0 4px 12px #0009}
-.tbadge{display:inline-block;background:#a855f7;color:#fff;font-weight:bold;font-size:11px;padding:2px 7px;border-radius:999px}
+#unmuteBtn{position:absolute;right:10px;bottom:10px;z-index:12;background:#f5b81c;color:#111318;font-weight:700;font-size:13px;padding:7px 12px;border-radius:6px;box-shadow:0 4px 12px #000a}
+.tbadge{display:inline-block;background:#a855f7;color:#fff;font-weight:700;font-size:11px;padding:2px 7px;border-radius:999px}
 .tbadge.pluto{background:#2563eb}
 .tbadge.vix{background:#ea580c}
 .tbadge.mplay{background:#ca8a04;color:#000}
 .tbadge.archive{background:#0d9488}
 .tbadge.plex{background:#d97706;color:#000}
 
-#ctl{display:flex;align-items:center;gap:4px;background:#0b0f19;padding:2px 6px;flex:none;flex-wrap:nowrap}
-#ctl button{background:none;padding:7px 8px;font-size:16px;flex:none}
-#ctl .qbtn{font-size:12px;padding:5px 7px;background:#1f2937;border-radius:6px;color:#fbbf24;font-weight:bold}
-#tiempo{font-size:13px;min-width:44px;flex:none}
-#seek{flex:1;min-width:40px;padding:0;accent-color:#fbbf24;background:none;height:24px}
+/* Barra de reproducción estilo W2G */
+#ctl{display:flex;align-items:center;gap:6px;background:#121723;border-bottom:1px solid #1e273a;padding:4px 8px;flex:none;flex-wrap:nowrap}
+#ctl button{background:none;color:#e5e7eb;padding:6px;font-size:16px;flex:none}
+#ctl .qbtn{font-size:11px;padding:4px 6px;background:#1d2638;border-radius:5px;color:#f5b81c;font-weight:700}
+#tiempo{font-size:13px;color:#cbd5e1;min-width:42px;flex:none;font-variant-numeric:tabular-nums}
+#seek{flex:1;min-width:40px;padding:0;accent-color:#3b82f6;background:none;height:18px}
 
-#tb{display:flex;align-items:center;gap:4px;padding:4px 10px;flex:none}
+/* Barra de sala y herramientas */
+#tb{display:flex;align-items:center;gap:4px;padding:6px 12px;background:#141a28;flex:none}
+#salaNombre{font-size:16px;font-weight:600;color:#e5e7eb}
 #tb .sp{flex:1}
-#tb button{background:none;padding:8px 10px;font-size:17px}
-#tb button.onModo{background:#fbbf24;color:#000;border-radius:8px}
-#salaNombre{font-size:17px}
+#tb button{background:none;color:#cbd5e1;padding:7px 9px;font-size:17px}
+#tb button.onModo{background:#f5b81c;color:#111318;border-radius:7px}
 
 #pages{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 #pages::-webkit-scrollbar{display:none}
-.pg{flex:0 0 100%;min-width:0;display:flex;flex-direction:column;overflow-y:auto;scroll-snap-align:start;padding:6px 12px}
-#dots{display:flex;justify-content:center;gap:10px;padding:8px;flex:none}
-#dots i{width:9px;height:9px;border-radius:50%;background:#4b5563;display:block}
-#dots i.on{background:#fff}
+.pg{flex:0 0 100%;min-width:0;display:flex;flex-direction:column;overflow-y:auto;scroll-snap-align:start;padding:8px 12px}
+#dots{display:flex;justify-content:center;gap:9px;padding:8px 0 10px;flex:none}
+#dots i{width:8px;height:8px;border-radius:50%;background:#4b5563;display:block}
+#dots i.on{background:#e5e7eb}
 
 /* Modo "como jugando" */
 #sala.gaming #vbox{flex:1;aspect-ratio:auto;width:100%;min-height:0}
@@ -67,31 +92,36 @@ button{background:#2b3648;color:#fff}
   max-width:460px;
   margin:auto;
   z-index:40;
-  background:rgba(17,24,39,.78);
+  background:rgba(17,22,34,.8);
   backdrop-filter:blur(4px);
   border-radius:12px;
 }
-#sala.gaming #pages{bottom:44px;height:34vh;max-height:260px}
+#sala.gaming #pages{bottom:48px;height:34vh;max-height:260px}
 #sala.gaming #dots{bottom:10px;padding:5px;width:fit-content}
-#sala.gaming .acciones{background:rgba(17,24,39,.9)}
+#sala.gaming .acciones{background:rgba(17,22,34,.92)}
 
 /* Personas */
-#tiles{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
-.tile{position:relative;width:var(--t);height:var(--t);border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#1e3a8a,#6b21a8)}
-.tile .av{font-size:calc(var(--t)*.55);text-align:center;margin-top:calc(var(--t)*.1);opacity:.6}
+#tiles{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start}
+.tile{position:relative;width:var(--t);height:var(--t);border-radius:6px;overflow:hidden;background:linear-gradient(135deg,#25479c,#5b248c)}
+.tile .av{font-size:calc(var(--t)*.52);text-align:center;margin-top:calc(var(--t)*.12);opacity:.72}
 .tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
-.tile .nom{position:absolute;bottom:0;left:0;right:0;background:#15803d;text-align:center;padding:3px;font-size:14px}
-.tile .rey{position:absolute;top:6px;left:6px;font-size:20px;z-index:2}
-.tile .kick{position:absolute;top:6px;right:6px;z-index:3;background:#dc2626;color:#fff;font-size:12px;padding:4px 7px;border-radius:6px}
-.acciones{position:sticky;bottom:0;margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:6px;background:#111827;padding:8px 0}
-.grupo{display:flex;background:#1f2937;border-radius:8px}
-.grupo button{background:none;padding:10px 14px}
+.tile .nom{position:absolute;bottom:0;left:0;right:0;background:#16803c;color:#fff;text-align:center;padding:4px 6px;font-size:14px;font-weight:600}
+.tile .rey{position:absolute;top:6px;left:6px;font-size:18px;z-index:2;filter:drop-shadow(0 1px 2px #000)}
+.tile .kick{position:absolute;top:6px;right:6px;z-index:3;background:#dc2626;color:#fff;font-size:12px;padding:3px 7px;border-radius:5px}
+
+/* Barra inferior estilo W2G */
+.acciones{position:sticky;bottom:0;margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;background:#111622;padding:8px 2px 2px}
+.btn-salir{background:#1b2232;color:#cbd5e1;padding:10px 12px;border-radius:8px;font-size:16px}
+.btn-inv{background:#f5b81c;color:#111318;font-weight:700;padding:10px 14px;border-radius:8px;font-size:15px}
+.grupo{display:flex;background:#1b2232;border-radius:8px;overflow:hidden}
+.grupo button{background:none;color:#cbd5e1;padding:10px 13px;font-size:15px}
+.grupo button+button{border-left:1px solid #283249}
 
 /* Chat */
 #chat{flex:1;overflow-y:auto}
-.msg{background:#1f2937;border-radius:10px;padding:8px 10px;margin:6px 0;font-size:14px}
+.msg{background:#1a2234;border-radius:10px;padding:8px 10px;margin:6px 0;font-size:14px}
 .msg small{color:#9ca3af;float:right;margin-left:8px;font-size:11px}
-.msg b{color:#fbbf24}
+.msg b{color:#f5b81c}
 .vid{display:flex;gap:8px;align-items:flex-start}
 .vid .yt{background:#ff0033;color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none}
 .vid .appTag{color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none;border:0;margin:0;background:#a855f7}
@@ -104,26 +134,26 @@ button{background:#2b3648;color:#fff}
 .vid small{margin-left:auto}
 .cin{display:flex;gap:6px;padding-top:6px;flex:none}
 .cin button{padding:10px 14px}
-#emojis{display:flex;flex-wrap:wrap;gap:4px;background:#1f2937;border-radius:8px;padding:6px;margin-top:6px;flex:none}
+#emojis{display:flex;flex-wrap:wrap;gap:4px;background:#1a2234;border-radius:8px;padding:6px;margin-top:6px;flex:none}
 #emojis button{background:none;padding:6px;font-size:22px}
 
 /* Lista de reproducción */
-.stabs{display:flex;gap:4px;border-bottom:2px solid #1f2937;flex:none}
+.stabs{display:flex;gap:4px;border-bottom:2px solid #1e273a;flex:none}
 .stabs button{background:none;border-radius:0;color:#9ca3af;font-size:15px}
-.stabs button.on{color:#fff;border-bottom:3px solid #fbbf24}
+.stabs button.on{color:#fff;border-bottom:3px solid #f5b81c}
 .sub{display:none;flex:1;min-height:0;flex-direction:column}
 .sub.on{display:flex}
 #pHist{overflow-y:auto}
-.tb{display:flex;align-items:center;gap:2px;border-bottom:2px solid #1f2937;margin:6px 0}
+.tb{display:flex;align-items:center;gap:2px;border-bottom:2px solid #1e273a;margin:6px 0}
 .tb button{background:none;padding:8px 12px;font-size:20px;color:#cbd5e1;border-radius:0}
 .tb .sp{flex:1}
 #filtro{margin:6px 0}
 #cuenta{font-size:13px;color:#9ca3af}
 #items{flex:1;overflow-y:auto;position:relative}
-.card{display:flex;align-items:stretch;border:1px solid #2d3748;border-radius:8px;overflow:hidden;background:#161d2b;margin:8px 0;min-height:64px}
-.card.act{border-color:#fbbf24}
+.card{display:flex;align-items:stretch;border:1px solid #263149;border-radius:8px;overflow:hidden;background:#161d2e;margin:8px 0;min-height:64px}
+.card.act{border-color:#f5b81c}
 .card.act .t{text-decoration:underline}
-.mini{position:relative;width:100px;flex:none;background:#2b3648 center/cover no-repeat}
+.mini{position:relative;width:100px;flex:none;background:#252f44 center/cover no-repeat}
 .mini::after{content:'▶';position:absolute;inset:0;margin:auto;width:34px;height:34px;line-height:34px;text-align:center;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px}
 .mini.appMini{background:linear-gradient(135deg,#312e81,#111827)}
 .card .t{flex:1;display:flex;align-items:center;padding:8px 10px;font-size:14px;color:#d1d5db}
@@ -131,50 +161,70 @@ button{background:#2b3648;color:#fff}
 .card .acc button{background:none;padding:4px 6px;font-size:18px;color:#cbd5e1}
 
 /* Buscador */
-#buscador{position:fixed;inset:0;background:#111827;z-index:50;overflow-y:auto;padding:10px;max-width:700px;margin:auto}
+#buscador{position:fixed;inset:0;background:#111622;z-index:50;overflow-y:auto;padding:10px;max-width:700px;margin:auto}
 .bfila{display:flex;gap:6px}
-.bcaja{flex:1;display:flex;align-items:center;background:#1f2937;border:1px solid #2d3748;border-radius:8px;padding-left:8px;min-width:0}
-.bcaja input{background:none;padding:12px 6px}
+.bcaja{flex:1;display:flex;align-items:center;background:#1a2234;border:1px solid #2b3752;border-radius:8px;padding-left:8px;min-width:0}
+.bcaja input{background:none;border:0;padding:11px 6px}
 .bcaja button{background:none;padding:10px}
 .bic{background:#4b5563;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:12px;flex:none}
 .bic.yt{background:#ff0033;border-radius:6px;width:34px}
 .bic.appIc{background:#a855f7;border-radius:6px;padding:0 6px;width:auto}
 .bbtn{padding:10px 14px}
-.btabs{display:flex;gap:2px;overflow-x:auto;border-bottom:2px solid #1f2937;margin:10px 0}
+.btabs{display:flex;gap:2px;overflow-x:auto;border-bottom:2px solid #1e273a;margin:10px 0}
 .btabs button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap;font-size:15px;padding:10px}
-.btabs button.on{color:#fff;border-bottom:3px solid #fbbf24}
+.btabs button.on{color:#fff;border-bottom:3px solid #f5b81c}
 .bpan{display:none}.bpan.on{display:block}
 .imp{text-align:center;margin:8px 0}
 .imp button{width:85%}
-.res{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #1f2937}
+.res{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #1e273a}
 .res .mini{width:110px;height:68px;border-radius:8px}
 .rt{flex:1;font-size:14px}
 .rt button{display:block;font-size:12px;padding:6px 10px;margin-top:6px}
-.appCard{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;margin:8px 0}
-.appCard input,.appCard select{background:#111827;margin:6px 0}
+.appCard{background:#1a2234;border:1px solid #2b3752;border-radius:10px;padding:12px;margin:8px 0}
+.appCard input,.appCard select{background:#111622;margin:6px 0}
 .appRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .appRow button{font-size:13px;padding:9px 12px}
 .spin{text-align:center;padding:30px;font-size:28px}
-#toast{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#374151;color:#fff;padding:10px 16px;border-radius:10px;z-index:100;font-size:14px;max-width:90%}
+#toast{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#2a354d;color:#fff;padding:10px 16px;border-radius:10px;z-index:100;font-size:14px;max-width:90%}
 </style>
 </head>
 <body>
 
-<div id="lobby" class="caja">
-  <div class="logo">Cine<b>2Gether</b></div>
-  <input id="nombre" placeholder="Tu nombre" style="margin:14px 0">
-  <h2>Mis Salas</h2>
-  <div style="display:flex;gap:6px;margin:6px 0">
-    <input id="codigo" placeholder="Código de sala (vacío = nueva)">
-    <button class="am" onclick="entrar()">Entrar</button>
+<div id="lobby">
+  <div class="w2g-top">
+    <div class="w2g-brand"><span class="w2g-mark">W2</span><span>Cine2Gether</span></div>
+    <div class="w2g-nick-pill" id="lobbyNickBadge" onclick="editarApodoLobby()">👤 <span id="lobbyNickTxt">Invitado</span></div>
   </div>
-  <div id="misSalas"></div>
+  <div class="w2g-wrap">
+    <div class="w2g-hdr">
+      <h2>Mis Salas</h2>
+      <div class="w2g-act">
+        <button class="w2g-btn-sm" onclick="crearSalaRapida()">Crear una Sala</button>
+        <button class="w2g-icon-btn" title="Actualizar" onclick="mostrarSalas()">↻</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin:8px 0 14px">
+      <input id="codigo" placeholder="Código de sala (o toca Crear una Sala)">
+      <button class="am" onclick="entrar()">Entrar</button>
+    </div>
+    <div id="misSalas"></div>
+  </div>
+</div>
+
+<div id="joinCard" hidden>
+  <div class="join-box">
+    <h3>¡Bienvenido a Cine2Gether!</h3>
+    <label for="nombre">Elige un Apodo</label>
+    <input id="nombre" placeholder="Tu apodo" maxlength="20">
+    <button class="az" onclick="confirmarUnion()">Únete a la sala</button>
+  </div>
 </div>
 
 <div id="sala" hidden>
   <div id="vbox">
+    <button id="pipCerrar" onclick="cerrarPip()" title="Quitar ventanita">✕</button>
     <div id="player"></div>
-    <button id="unmuteBtn" hidden onclick="activarSonido()">🔊 Activar sonido</button>
+    <button id="unmuteBtn" hidden onclick="activarSonido()">🔊 Unmute</button>
     <div id="extBar" hidden>
       <span id="appBadge" class="tbadge">APP</span>
       <span id="appActualTit">Contenido</span>
@@ -183,6 +233,7 @@ button{background:#2b3648;color:#fff}
     </div>
     <iframe id="extFrame" hidden allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerpolicy="no-referrer-when-downgrade"></iframe>
   </div>
+  <div id="pipAviso" hidden>Video reproduciéndose en imagen dentro de otra (PiP).</div>
   <div id="ctl">
     <button id="bPlay" onclick="playPausa()">▶</button>
     <span id="tiempo">00:00</span>
@@ -206,15 +257,15 @@ button{background:#2b3648;color:#fff}
     <div class="pg">
       <div id="tiles"></div>
       <div class="acciones">
-        <button onclick="salir()">🚪</button>
-        <button class="am" onclick="invitar(this)">👤+ Invitar</button>
+        <button class="btn-salir" onclick="salir()" title="Salir">🚪</button>
+        <button class="btn-inv" onclick="invitar(this)">👤+ Invitar</button>
         <div class="grupo">
-          <button id="bCam" onclick="camaraOnOff()">📹</button>
-          <button id="bMic" onclick="micOnOff()">🎤</button>
+          <button id="bCam" onclick="camaraOnOff()" title="Cámara">📹</button>
+          <button id="bMic" onclick="micOnOff()" title="Micrófono">🎤</button>
         </div>
         <div class="grupo">
-          <button onclick="zoomTiles(-1)">−</button>
-          <button onclick="zoomTiles(1)">+</button>
+          <button onclick="zoomTiles(-1)" title="Reducir">−</button>
+          <button onclick="zoomTiles(1)" title="Agrandar">+</button>
         </div>
       </div>
     </div>
@@ -320,8 +371,8 @@ let yt, listo = false, ignorar = false, pendiente = null;
 let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
 let fuenteActual = 'yt', appActual = null, ultimoEstado = null;
 let listaActual = [], posActual = -1, resultados = [], resEsLista = false;
-let importando = false, arrastrando = false, zoom = 150, tToast, velIdx = 0, calIdx = 0;
-let modoGaming = false, fullRespaldo = false, pipFlotante = false;
+let importando = false, arrastrando = false, zoom = 146, tToast, velIdx = 0, calIdx = 0;
+let modoGaming = false, fullRespaldo = false, pipFlotante = false, salaPendiente = '';
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 const CALIDADES = [
@@ -354,7 +405,7 @@ socket.on('expulsado', () => {
 });
 const hora = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-/* ---------- Salas guardadas ---------- */
+/* ---------- Salas guardadas y apodo ---------- */
 function guardadas() { try { return JSON.parse(localStorage.getItem('salas') || '[]'); } catch (e) { return []; } }
 function guardar(c) {
   try {
@@ -362,27 +413,59 @@ function guardar(c) {
     localStorage.setItem('salas', JSON.stringify(l.slice(0, 10)));
   } catch (e) {}
 }
+function sincronizarApodoUI() {
+  const n = ($('nombre').value || localStorage.getItem('nombre') || 'Invitado').trim() || 'Invitado';
+  $('lobbyNickTxt').textContent = n;
+}
+function editarApodoLobby() {
+  const actual = ($('nombre').value || localStorage.getItem('nombre') || '').trim();
+  const n = prompt('Tu apodo', actual);
+  if (n && n.trim()) {
+    $('nombre').value = n.trim().slice(0, 20);
+    try { localStorage.setItem('nombre', $('nombre').value); } catch (e) {}
+    sincronizarApodoUI();
+  }
+}
 function mostrarSalas() {
   $('misSalas').innerHTML = guardadas().map(c =>
-    `<div class="salaItem" onclick="entrar('${c}')">🕘 Sala ${esc(c)} ›</div>`).join('');
+    `<div class="salaItem" onclick="entrar('${c}')"><div><strong>🕘 ${esc(c)}</strong><small>Sala guardada</small></div><span>›</span></div>`).join('');
 }
 try { $('nombre').value = localStorage.getItem('nombre') || ''; } catch (e) {}
+sincronizarApodoUI();
 const prm = new URLSearchParams(location.search);
 if (prm.get('sala')) $('codigo').value = prm.get('sala');
 mostrarSalas();
 
+function crearSalaRapida() {
+  const nueva = 'sala-' + Math.random().toString(36).slice(2, 7);
+  $('codigo').value = nueva;
+  entrar(nueva);
+}
+
 function entrar(c) {
-  nombre = $('nombre').value.trim() || 'Invitado';
+  salaPendiente = String(c || $('codigo').value).trim().replace(/[^\w-]/g, '').slice(0, 30) || Math.random().toString(36).slice(2, 8);
+  $('nombre').value = localStorage.getItem('nombre') || $('nombre').value || '';
+  $('joinCard').hidden = false;
+  $('nombre').focus();
+}
+
+function confirmarUnion() {
+  nombre = ($('nombre').value || '').trim().slice(0, 20) || 'Invitado';
   try { localStorage.setItem('nombre', nombre); } catch (e) {}
-  sala = String(c || $('codigo').value).trim().replace(/[^\w-]/g, '').slice(0, 30) || Math.random().toString(36).slice(2, 8);
+  sincronizarApodoUI();
+  $('joinCard').hidden = true;
+  sala = salaPendiente || Math.random().toString(36).slice(2, 8);
   history.replaceState(null, '', '?sala=' + sala);
   guardar(sala);
   $('lobby').hidden = true;
   $('sala').hidden = false;
-  $('salaNombre').textContent = 'Sala ' + sala;
+  $('salaNombre').textContent = sala + ' ▾';
   crearPlayer();
   socket.emit('entrar', { sala, nombre });
 }
+
+$('nombre').addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmarUnion(); });
+
 function salir() { location.href = location.pathname; }
 function invitar(b) {
   if (navigator.clipboard) navigator.clipboard.writeText(location.href);
@@ -390,21 +473,34 @@ function invitar(b) {
   setTimeout(() => b.textContent = '👤+ Invitar', 1500);
 }
 function ajustes() {
-  const n = prompt('Tu nombre en la sala', nombre);
+  const n = prompt('Tu apodo en la sala', nombre);
   if (n && n.trim()) {
     nombre = n.trim().slice(0, 20);
     try { localStorage.setItem('nombre', nombre); } catch (e) {}
+    sincronizarApodoUI();
     socket.emit('nombre', nombre);
   }
 }
 socket.on('connect', () => { miId = socket.id; if (sala) socket.emit('entrar', { sala, nombre }); });
 
 /* ---------- PiP, pantalla completa y modo "como jugando" ---------- */
-function alternarPip() {
-  pipFlotante = !pipFlotante;
+function actualizarEstadoPipUI() {
   $('vbox').classList.toggle('pipFlotante', pipFlotante);
   $('bPip').classList.toggle('onModo', pipFlotante);
+  $('pipAviso').hidden = !pipFlotante;
+}
+function alternarPip() {
+  pipFlotante = !pipFlotante;
+  actualizarEstadoPipUI();
   aviso(pipFlotante ? 'Imagen en imagen (PiP) activada' : 'Vista normal del reproductor');
+}
+function cerrarPip() {
+  pipFlotante = false;
+  actualizarEstadoPipUI();
+  if (listo && yt && fuenteActual === 'yt') {
+    try { yt.pauseVideo(); } catch (e) {}
+  }
+  aviso('Ventanita cerrada');
 }
 
 function activarSonido() {
@@ -685,7 +781,6 @@ function forzarSync() {
   aviso('Sincronizado con la sala');
 }
 
-/* Ajuste periódico suave para mantener todos en el mismo segundo */
 setInterval(() => {
   if (!listo || !yt || !yt.getPlayerState || fuenteActual !== 'yt' || !ultimoEstado || !ultimoEstado.id) return;
   if (!ultimoEstado.play || yt.getPlayerState() !== 1) return;
