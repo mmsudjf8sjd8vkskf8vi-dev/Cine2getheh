@@ -25,7 +25,6 @@ button.sm{padding:4px 10px;font-size:13px;border-radius:8px}
 .card{background:var(--s1);border:1px solid var(--bd);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .row{display:flex;gap:8px;align-items:center}
 .bar{display:flex;align-items:center;gap:8px;justify-content:space-between}
-.chip{background:var(--s2);border:1px solid var(--bd);border-radius:20px;padding:6px 12px;font-size:13px}
 .logo{width:76px;height:76px;border-radius:24px;background:var(--ac);display:grid;place-items:center;font-size:38px;margin:0 auto;box-shadow:0 10px 30px rgba(139,92,246,.4)}
 .lbl{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:14px}
 .it{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--bd);padding:8px;border-radius:14px;margin-bottom:8px;cursor:pointer}
@@ -60,17 +59,11 @@ button.sm{padding:4px 10px;font-size:13px;border-radius:8px}
 <div id="auth" class="s" style="justify-content:center">
   <div class="logo">🎬</div>
   <h1>Cine con amigos</h1>
-  <p class="mu" style="text-align:center">Mira videos y películas juntos, sincronizados.</p>
-  <div class="card">
-    <input id="u" placeholder="Usuario" autocapitalize="none">
-    <input id="p" type="password" placeholder="Clave">
-    <button onclick="doAuth('login')">Iniciar sesión</button>
-    <button class="g" onclick="doAuth('register')">Crear cuenta</button>
-  </div>
+  <p class="mu" style="text-align:center">Cargando… la primera vez puede tardar un poco.</p>
 </div>
 
 <div id="rooms" class="s">
-  <div class="bar"><h2>Mis Salas</h2><div class="row"><span class="chip" id="me"></span><button class="g sm" onclick="logout()">Salir</button></div></div>
+  <div class="bar"><h2>Mis Salas</h2><button class="g sm" id="me" onclick="rename()"></button></div>
   <div id="rl"></div>
   <div class="card">
     <h3>✨ Crear sala</h3>
@@ -129,21 +122,27 @@ function copyCode(){
   else toast('Código: '+c);
 }
 
-// ---------- Cuenta ----------
-async function doAuth(kind){
-  const r=await fetch('/api/'+kind,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({u:$('u').value.trim(),p:$('p').value})});
-  const j=await r.json();
-  if(j.e)return toast(j.e);
-  localStorage.t=j.t;localStorage.n=j.n;conn();
+// ---------- Entrada directa (invitado) ----------
+async function guest(){
+  try{
+    const r=await fetch('/api/guest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({n:localStorage.n||''})});
+    const j=await r.json();
+    if(j.e)return toast(j.e);
+    localStorage.t=j.t;localStorage.n=j.n;conn();
+  }catch(e){toast('No pude conectar. Reintentando…');setTimeout(guest,3000)}
 }
-function logout(){localStorage.clear();if(S)S.disconnect();cr=null;show('auth')}
+function rename(){
+  const v=prompt('Tu nombre:',localStorage.n||'');
+  if(v===null)return;
+  S.emit('name',v,a=>{if(a&&a.n){localStorage.n=a.n;$('me').textContent='✏️ '+a.n}else toast('Nombre no válido')});
+}
 
 // ---------- Conexión ----------
 function conn(){
   if(S)S.disconnect();
   S=io({auth:{t:localStorage.t}});
-  S.on('connect_error',e=>{if(e.message==='auth'){localStorage.removeItem('t');show('auth')}});
-  S.on('connect',()=>{$('me').textContent='👤 '+localStorage.n;cr&&inRoom?enter(cr.id,cr.pass,1):loadRooms()});
+  S.on('connect_error',e=>{if(e.message==='auth'){S.disconnect();localStorage.removeItem('t');guest()}});
+  S.on('connect',()=>{$('me').textContent='✏️ '+localStorage.n;cr&&inRoom?enter(cr.id,cr.pass,1):loadRooms()});
   S.on('ppl',l=>{
     const el=$('pp');el.innerHTML='';
     l.forEach(x=>{
@@ -274,5 +273,5 @@ function send(){const v=$('cm').value.trim();if(v){S.emit('chat',v);$('cm').valu
 $('cm').onkeydown=e=>{if(e.key==='Enter')send()};
 $('lk').onkeydown=e=>{if(e.key==='Enter')addLink()};
 
-if(localStorage.t)conn();else show('auth');
+if(localStorage.t)conn();else guest();
 </script></body></html>
