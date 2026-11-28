@@ -10,8 +10,8 @@
 :root{--t:150px}
 html,body{margin:0;height:100%}
 body{background:#111827;color:#e5e7eb;font-family:sans-serif;overflow:hidden}
-button,input{font-size:16px;border:0;border-radius:8px;padding:12px;font-family:inherit}
-input{background:#1f2937;color:#fff;width:100%}
+button,input,select{font-size:16px;border:0;border-radius:8px;padding:12px;font-family:inherit}
+input,select{background:#1f2937;color:#fff;width:100%}
 button{background:#2b3648;color:#fff}
 .am{background:#fbbf24;color:#000;font-weight:bold}
 .gris{color:#9ca3af}
@@ -24,12 +24,17 @@ button{background:#2b3648;color:#fff}
 #sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto}
 #vbox{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex:none}
 #vbox.mini{position:fixed;right:8px;bottom:8px;width:55%;max-width:320px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #000a}
-#player,#tubiBox{width:100%;height:100%}
-#tubiBox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;text-align:center;background:radial-gradient(circle at top,#26163d,#090d16)}
-#tubiBox .tbadge{background:#a855f7;color:#fff;font-weight:bold;font-size:12px;padding:3px 9px;border-radius:999px}
-#tubiBox .ttit{font-size:15px;font-weight:bold;max-width:95%}
-#tubiBox .tbtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-#tubiBox .tbtns button{font-size:13px;padding:8px 12px}
+#player,#appBox{width:100%;height:100%}
+#appBox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;text-align:center;background:radial-gradient(circle at top,#26163d,#090d16)}
+.tbadge{display:inline-block;background:#a855f7;color:#fff;font-weight:bold;font-size:11px;padding:3px 8px;border-radius:999px}
+.tbadge.pluto{background:#2563eb}
+.tbadge.vix{background:#ea580c}
+.tbadge.mplay{background:#ca8a04;color:#000}
+.tbadge.archive{background:#0d9488}
+.tbadge.plex{background:#d97706;color:#000}
+#appBox .ttit{font-size:15px;font-weight:bold;max-width:95%}
+#appBox .tbtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+#appBox .tbtns button{font-size:13px;padding:8px 12px}
 #ctl{display:flex;align-items:center;gap:6px;background:#0b0f19;padding:2px 8px;flex:none}
 #ctl button{background:none;padding:8px;font-size:18px}
 #tiempo{font-size:14px;min-width:46px}
@@ -65,7 +70,12 @@ button{background:#2b3648;color:#fff}
 .msg b{color:#fbbf24}
 .vid{display:flex;gap:8px;align-items:flex-start}
 .vid .yt{background:#ff0033;color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none}
-.vid .tb{background:#a855f7;color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none;border:0;margin:0}
+.vid .appTag{color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none;border:0;margin:0;background:#a855f7}
+.vid .appTag.pluto{background:#2563eb}
+.vid .appTag.vix{background:#ea580c}
+.vid .appTag.mplay{background:#ca8a04;color:#000}
+.vid .appTag.archive{background:#0d9488}
+.vid .appTag.plex{background:#d97706;color:#000}
 .vid a{color:#93c5fd;font-size:13px}
 .vid small{margin-left:auto}
 .cin{display:flex;gap:6px;padding-top:6px;flex:none}
@@ -91,7 +101,7 @@ button{background:#2b3648;color:#fff}
 .card.act .t{text-decoration:underline}
 .mini{position:relative;width:100px;flex:none;background:#2b3648 center/cover no-repeat}
 .mini::after{content:'▶';position:absolute;inset:0;margin:auto;width:34px;height:34px;line-height:34px;text-align:center;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px}
-.mini.tubiMini{background:linear-gradient(135deg,#4c1d95,#1e1b4b)}
+.mini.appMini{background:linear-gradient(135deg,#312e81,#111827)}
 .card .t{flex:1;display:flex;align-items:center;padding:8px 10px;font-size:14px;color:#d1d5db}
 .card .acc{display:flex;flex-direction:column;justify-content:space-between;padding:4px 6px}
 .card .acc button{background:none;padding:4px 6px;font-size:18px;color:#cbd5e1}
@@ -104,7 +114,7 @@ button{background:#2b3648;color:#fff}
 .bcaja button{background:none;padding:10px}
 .bic{background:#4b5563;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:12px;flex:none}
 .bic.yt{background:#ff0033;border-radius:6px;width:34px}
-.bic.tbi{background:#a855f7;border-radius:6px;width:36px}
+.bic.appIc{background:#a855f7;border-radius:6px;padding:0 6px;width:auto}
 .bbtn{padding:10px 14px}
 .btabs{display:flex;gap:2px;overflow-x:auto;border-bottom:2px solid #1f2937;margin:10px 0}
 .btabs button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap;font-size:15px;padding:10px}
@@ -116,10 +126,10 @@ button{background:#2b3648;color:#fff}
 .res .mini{width:110px;height:68px;border-radius:8px}
 .rt{flex:1;font-size:14px}
 .rt button{display:block;font-size:12px;padding:6px 10px;margin-top:6px}
-.tubiBoxIn{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;margin-top:8px}
-.tubiBoxIn input{background:#111827;margin:6px 0}
-.tubiRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.tubiRow button{font-size:14px;padding:10px 14px}
+.appCard{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;margin:8px 0}
+.appCard input,.appCard select{background:#111827;margin:6px 0}
+.appRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.appRow button{font-size:13px;padding:9px 12px}
 .spin{text-align:center;padding:30px;font-size:28px}
 #toast{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#374151;color:#fff;padding:10px 16px;border-radius:10px;z-index:100;font-size:14px;max-width:90%}
 </style>
@@ -140,13 +150,13 @@ button{background:#2b3648;color:#fff}
 <div id="sala" hidden>
   <div id="vbox">
     <div id="player"></div>
-    <div id="tubiBox" hidden>
-      <span class="tbadge">TUBI</span>
-      <div class="ttit" id="tubiActualTit">Contenido de Tubi</div>
-      <div class="gris" id="tubiActualUrl" style="font-size:12px;word-break:break-all"></div>
+    <div id="appBox" hidden>
+      <span id="appBadge" class="tbadge">APP</span>
+      <div class="ttit" id="appActualTit">Contenido externo</div>
+      <div class="gris" id="appActualUrl" style="font-size:12px;word-break:break-all"></div>
       <div class="tbtns">
-        <button class="am" onclick="abrirTubiExterno()">▶ Abrir / Ver en Tubi</button>
-        <button onclick="copiarTubiEnlace()">📋 Copiar enlace</button>
+        <button class="am" onclick="abrirAppActual()">▶ Abrir contenido</button>
+        <button onclick="copiarAppActual()">📋 Copiar enlace</button>
       </div>
     </div>
   </div>
@@ -223,7 +233,7 @@ button{background:#2b3648;color:#fff}
   <div class="bfila">
     <div class="bcaja">
       <span id="bic" class="bic">▶</span>
-      <input id="bin" placeholder="Busca o pega un enlace" autocomplete="off">
+      <input id="bin" placeholder="Busca o pega enlace (YT, Tubi, Pluto, ViX, Mercado Play, Archive, Plex)" autocomplete="off">
       <button id="bclear">✕</button>
     </div>
     <button class="bbtn" onclick="buscar()">🔍</button>
@@ -234,21 +244,37 @@ button{background:#2b3648;color:#fff}
     <button data-b="bApps">▦ Aplicaciones</button>
     <button data-b="bPant">🖥 Compartir pantalla</button>
   </div>
-  <div class="bpan on" id="bCont"><p class="gris">Pega un enlace de YouTube (video o playlist) o de Tubi y toca 🔍.</p></div>
+  <div class="bpan on" id="bCont"><p class="gris">Pega un enlace de YouTube (video o playlist) o de Tubi, Pluto TV, ViX, Mercado Play, Internet Archive o Plex y toca 🔍.</p></div>
   <div class="bpan" id="bApps">
-    <div class="tubiBoxIn">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="bic tbi">TUBI</span>
-        <b>Tubi</b>
+    <div class="appCard">
+      <b>Cargar app gratuita en la sala</b>
+      <p class="gris" style="font-size:13px;margin:6px 0">Elige la app, pega el enlace o ID y agrega un título opcional.</p>
+      <select id="appSel">
+        <option value="tubi">Tubi</option>
+        <option value="pluto">Pluto TV</option>
+        <option value="vix">ViX</option>
+        <option value="mplay">Mercado Play</option>
+        <option value="archive">Internet Archive</option>
+        <option value="plex">Plex</option>
+      </select>
+      <input id="appUrl" placeholder="Pega enlace o ID del contenido">
+      <input id="appTit" placeholder="Título opcional">
+      <div class="appRow">
+        <button class="am" onclick="cargarAppInput()">▶ Cargar en sala</button>
+        <button onclick="agregarAppInput()">＋ Añadir a lista</button>
+        <button onclick="sugerirAppInput()">💬 Sugerir al chat</button>
       </div>
-      <p class="gris" style="font-size:13px;margin:8px 0">Pega un enlace o ID de película/serie de Tubi y opcionalmente un título para compartirlo con la sala.</p>
-      <input id="tubiUrl" placeholder="Ej. https://tubitv.com/movies/123456/titulo o ID">
-      <input id="tubiTit" placeholder="Título opcional (ej. Película en Tubi)">
-      <div class="tubiRow">
-        <button class="am" onclick="reproducirTubi()">▶ Cargar en sala</button>
-        <button onclick="agregarTubiLista()">＋ Añadir a lista</button>
-        <button onclick="sugerirTubiChat()">💬 Sugerir al chat</button>
-        <button onclick="window.open('https://tubitv.com','_blank','noopener')">↗ Abrir Tubi</button>
+    </div>
+
+    <div class="appCard">
+      <b>Accesos rápidos (catálogo gratis)</b>
+      <div class="appRow">
+        <button onclick="window.open('https://tubitv.com','_blank','noopener')">Tubi</button>
+        <button onclick="window.open('https://pluto.tv','_blank','noopener')">Pluto TV</button>
+        <button onclick="window.open('https://www.vix.com','_blank','noopener')">ViX</button>
+        <button onclick="window.open('https://play.mercadolibre.com.mx','_blank','noopener')">Mercado Play</button>
+        <button onclick="window.open('https://archive.org/details/movies','_blank','noopener')">Internet Archive</button>
+        <button onclick="window.open('https://watch.plex.tv','_blank','noopener')">Plex</button>
       </div>
     </div>
   </div>
@@ -265,11 +291,20 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 const socket = io();
 let yt, listo = false, ignorar = false, pendiente = null;
 let miId = null, sala = '', nombre = '', usuarios = [], camara = null, vipActivo = false;
-let fuenteActual = 'yt', tubiActual = null;
+let fuenteActual = 'yt', appActual = null;
 let listaActual = [], posActual = -1, resultados = [], resEsLista = false;
 let importando = false, arrastrando = false, zoom = 150, tToast, velIdx = 0;
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+const APPS_META = {
+  tubi: { label: 'TUBI', home: 'https://tubitv.com', pathPrefix: 'https://tubitv.com/movies/' },
+  pluto: { label: 'PLUTO TV', home: 'https://pluto.tv', pathPrefix: 'https://pluto.tv/latam/on-demand/' },
+  vix: { label: 'VIX', home: 'https://www.vix.com', pathPrefix: 'https://www.vix.com/es/video/' },
+  mplay: { label: 'MERCADO PLAY', home: 'https://play.mercadolibre.com.mx', pathPrefix: 'https://play.mercadolibre.com.mx/' },
+  archive: { label: 'ARCHIVE', home: 'https://archive.org', pathPrefix: 'https://archive.org/details/' },
+  plex: { label: 'PLEX', home: 'https://watch.plex.tv', pathPrefix: 'https://watch.plex.tv/movie/' }
+};
 
 function aviso(t) {
   const x = $('toast');
@@ -343,83 +378,108 @@ document.querySelectorAll('.stabs button').forEach(b => b.onclick = () => {
   if (b.dataset.s === 'pLista') renderLista();
 });
 
-/* ---------- Tubi helper ---------- */
-function parseTubi(raw) {
+/* ---------- Detección de apps ---------- */
+function detectarFuente(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
-  if (/tubi/i.test(s)) {
-    const m = s.match(/tubitv\.com\/(?:movies|series|tv-shows|live)\/([^/?#]+)/i);
-    const id = m ? m[1] : s.replace(/^https?:\/\//i, '').slice(0, 80);
-    const url = /^https?:\/\//i.test(s) ? s : `https://tubitv.com/${id}`;
-    return { id, url, titulo: 'Tubi: ' + id, fuente: 'tubi' };
-  }
-  if (/^[\w-]{3,50}$/.test(s) && !/youtu/i.test(s)) {
-    return { id: s, url: `https://tubitv.com/movies/${encodeURIComponent(s)}`, titulo: 'Tubi: ' + s, fuente: 'tubi' };
-  }
+  if (/tubi/i.test(s)) return 'tubi';
+  if (/pluto\.tv|plutotv/i.test(s)) return 'pluto';
+  if (/vix\.com|\bvix\b/i.test(s)) return 'vix';
+  if (/mercadolibre\.com|mercado\s*play|mplay/i.test(s)) return 'mplay';
+  if (/archive\.org|internet\s*archive/i.test(s)) return 'archive';
+  if (/plex\.tv|\bplex\b/i.test(s)) return 'plex';
   return null;
 }
 
+function parseAppItem(raw, fuenteForzada = null) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  const f = fuenteForzada || detectarFuente(s);
+  if (!f || !APPS_META[f]) return null;
+  const meta = APPS_META[f];
+  let url = s;
+  if (!/^https?:\/\//i.test(s)) {
+    const limpioId = s.replace(/^\/+/, '');
+    url = limpioId ? meta.pathPrefix + limpioId : meta.home;
+  }
+  const id = url.replace(/^https?:\/\//i, '').slice(0, 120) || f;
+  return { id, url, titulo: `${meta.label}: ${s.slice(0, 70)}`, fuente: f };
+}
+
+function badgeHtml(fuente) {
+  const f = APPS_META[fuente] ? fuente : 'tubi';
+  return `<span class="tbadge ${f}">${APPS_META[f].label}</span>`;
+}
+function chatBadgeHtml(fuente) {
+  const f = APPS_META[fuente] ? fuente : 'tubi';
+  return `<span class="appTag ${f}">${APPS_META[f].label}</span>`;
+}
+
 function mostrarModoFuente(fuente, id, titulo) {
-  fuenteActual = fuente === 'tubi' ? 'tubi' : 'yt';
-  const esTubi = fuenteActual === 'tubi' && Boolean(id);
-  $('tubiBox').hidden = !esTubi;
-  if ($('player')) $('player').style.display = esTubi ? 'none' : 'block';
-  if (esTubi) {
-    const parsed = parseTubi(id) || { id, url: `https://tubitv.com/movies/${id}`, titulo: titulo || id };
-    tubiActual = { id: parsed.id, url: parsed.url, titulo: titulo || parsed.titulo };
-    $('tubiActualTit').textContent = tubiActual.titulo;
-    $('tubiActualUrl').textContent = tubiActual.url;
+  const esApp = Boolean(fuente && fuente !== 'yt' && APPS_META[fuente] && id);
+  fuenteActual = esApp ? fuente : 'yt';
+  $('appBox').hidden = !esApp;
+  if ($('player')) $('player').style.display = esApp ? 'none' : 'block';
+  if (esApp) {
+    const meta = APPS_META[fuente];
+    const url = /^https?:\/\//i.test(id) ? id : (meta.pathPrefix + String(id).replace(/^\/+/, ''));
+    appActual = { fuente, id, url, titulo: titulo || `${meta.label}: ${id}` };
+    $('appBadge').className = `tbadge ${fuente}`;
+    $('appBadge').textContent = meta.label;
+    $('appActualTit').textContent = appActual.titulo;
+    $('appActualUrl').textContent = appActual.url;
     if (listo && yt && yt.pauseVideo) {
       ignorar = true;
       try { yt.pauseVideo(); } catch (e) {}
       setTimeout(() => ignorar = false, 500);
     }
   } else {
-    tubiActual = null;
+    appActual = null;
   }
 }
 
-function abrirTubiExterno() {
-  if (!tubiActual) return;
-  window.open(tubiActual.url, '_blank', 'noopener');
+function abrirAppActual() {
+  if (!appActual) return;
+  window.open(appActual.url, '_blank', 'noopener');
 }
-function copiarTubiEnlace() {
-  if (!tubiActual) return;
-  if (navigator.clipboard) navigator.clipboard.writeText(tubiActual.url);
-  aviso('Enlace de Tubi copiado');
+function copiarAppActual() {
+  if (!appActual) return;
+  if (navigator.clipboard) navigator.clipboard.writeText(appActual.url);
+  aviso('Enlace copiado');
 }
 
-function datosTubiInput() {
-  const raw = $('tubiUrl').value.trim();
-  const parsed = parseTubi(raw);
+function datosAppInput() {
+  const fuente = $('appSel').value;
+  const raw = $('appUrl').value.trim();
+  const parsed = parseAppItem(raw || APPS_META[fuente].home, fuente);
   if (!parsed) {
-    aviso('Pega un enlace válido o ID de Tubi');
+    aviso('Ingresa un enlace o ID válido');
     return null;
   }
-  const customTit = $('tubiTit').value.trim();
+  const customTit = $('appTit').value.trim();
   return {
     id: parsed.id,
     url: parsed.url,
     titulo: customTit || parsed.titulo,
-    fuente: 'tubi'
+    fuente
   };
 }
-function reproducirTubi() {
-  const d = datosTubiInput();
+function cargarAppInput() {
+  const d = datosAppInput();
   if (!d) return;
-  socket.emit('cargar', { id: d.id, titulo: d.titulo, fuente: 'tubi' });
+  socket.emit('cargar', { id: d.id, titulo: d.titulo, fuente: d.fuente });
   cerrarBuscador();
 }
-function agregarTubiLista() {
-  const d = datosTubiInput();
+function agregarAppInput() {
+  const d = datosAppInput();
   if (!d) return;
-  socket.emit('agregar', { id: d.id, titulo: d.titulo, fuente: 'tubi' });
+  socket.emit('agregar', { id: d.id, titulo: d.titulo, fuente: d.fuente });
 }
-function sugerirTubiChat() {
-  const d = datosTubiInput();
+function sugerirAppInput() {
+  const d = datosAppInput();
   if (!d) return;
-  socket.emit('sugerir', { id: d.id, titulo: d.titulo, fuente: 'tubi' });
-  aviso('Sugerencia de Tubi enviada al chat');
+  socket.emit('sugerir', { id: d.id, titulo: d.titulo, fuente: d.fuente });
+  aviso('Sugerencia enviada al chat');
 }
 
 /* ---------- Reproductor YouTube + barra de control ---------- */
@@ -432,7 +492,7 @@ function crearPlayer() {
       onReady: () => { listo = true; if (pendiente) aplicar(pendiente); },
       onError: () => { aviso('Video no disponible aquí, saltando…'); socket.emit('fin', yt.getVideoData().video_id); },
       onStateChange: (e) => {
-        if (ignorar || fuenteActual === 'tubi') return;
+        if (ignorar || fuenteActual !== 'yt') return;
         if (e.data === 0) { socket.emit('fin', yt.getVideoData().video_id); return; }
         if (e.data === 1 || e.data === 2) socket.emit('control', { play: e.data === 1, t: yt.getCurrentTime() });
       }
@@ -452,11 +512,11 @@ function aplicar(e) {
     $('bVip').classList.toggle('vipOn', vipActivo);
     $('bVip').textContent = vipActivo ? 'VIP ON' : 'VIP';
   }
-  const f = e.fuente === 'tubi' ? 'tubi' : 'yt';
-  if (f === 'tubi' && e.id) {
+  const f = e.fuente && e.fuente !== 'yt' ? e.fuente : 'yt';
+  if (f !== 'yt' && e.id) {
     pendiente = null;
-    const item = listaActual.find(v => v.id === e.id && (v.fuente || 'yt') === 'tubi');
-    mostrarModoFuente('tubi', e.id, item ? item.titulo : 'Tubi: ' + e.id);
+    const item = listaActual.find(v => v.id === e.id && (v.fuente || 'yt') === f);
+    mostrarModoFuente(f, e.id, item ? item.titulo : `${APPS_META[f]?.label || f}: ${e.id}`);
     return;
   }
   mostrarModoFuente('yt', null, null);
@@ -478,14 +538,14 @@ socket.on('estado', aplicar);
 
 const fmt = (s) => { s = Math.floor(s || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
 setInterval(() => {
-  if (!listo || !yt.getPlayerState || fuenteActual === 'tubi') return;
+  if (!listo || !yt.getPlayerState || fuenteActual !== 'yt') return;
   const d = yt.getDuration() || 0, c = yt.getCurrentTime() || 0;
   if (!arrastrando) { $('seek').max = d || 100; $('seek').value = c; $('tiempo').textContent = fmt(c); }
   $('bPlay').textContent = yt.getPlayerState() === 1 ? '⏸' : '▶';
 }, 500);
 $('seek').addEventListener('input', () => { arrastrando = true; $('tiempo').textContent = fmt(+$('seek').value); });
 $('seek').addEventListener('change', () => {
-  if (listo && fuenteActual !== 'tubi') {
+  if (listo && fuenteActual === 'yt') {
     const st = yt.getPlayerState();
     yt.seekTo(+$('seek').value, true);
     socket.emit('control', { play: st === 1 || st === 3, t: +$('seek').value });
@@ -493,19 +553,19 @@ $('seek').addEventListener('change', () => {
   arrastrando = false;
 });
 function playPausa() {
-  if (fuenteActual === 'tubi') return abrirTubiExterno();
+  if (fuenteActual !== 'yt') return abrirAppActual();
   if (!listo) return;
   yt.getPlayerState() === 1 ? yt.pauseVideo() : yt.playVideo();
 }
 function velocidad() {
-  if (!listo || fuenteActual === 'tubi') return;
+  if (!listo || fuenteActual !== 'yt') return;
   const v = [1, 1.25, 1.5, 2, 0.75];
   velIdx = (velIdx + 1) % v.length;
   yt.setPlaybackRate(v[velIdx]);
   aviso('Velocidad ' + v[velIdx] + 'x (solo para ti)');
 }
 function volumen() {
-  if (!listo || fuenteActual === 'tubi') return;
+  if (!listo || fuenteActual !== 'yt') return;
   if (yt.isMuted()) { yt.unMute(); $('bVol').textContent = '🔊'; }
   else { yt.mute(); $('bVol').textContent = '🔇'; }
 }
@@ -515,18 +575,19 @@ function abrirBuscador() { $('buscador').hidden = false; $('vbox').classList.add
 function cerrarBuscador() { $('buscador').hidden = true; $('vbox').classList.remove('mini'); }
 $('bin').addEventListener('input', () => {
   const val = $('bin').value;
+  const f = detectarFuente(val);
   $('bic').classList.toggle('yt', /youtu/.test(val));
-  $('bic').classList.toggle('tbi', /tubi/i.test(val));
+  $('bic').classList.toggle('appIc', Boolean(f));
+  $('bic').textContent = f ? APPS_META[f].label : '▶';
 });
 $('bin').addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
-$('bclear').onclick = () => { $('bin').value = ''; $('bic').classList.remove('yt', 'tbi'); $('bin').focus(); };
+$('bclear').onclick = () => { $('bin').value = ''; $('bic').classList.remove('yt', 'appIc'); $('bic').textContent = '▶'; $('bin').focus(); };
 $('btabs').onclick = (e) => {
   const t = e.target.dataset.b; if (!t) return;
   document.querySelectorAll('.btabs button,.bpan').forEach(x => x.classList.remove('on'));
   e.target.classList.add('on'); $(t).classList.add('on');
 };
 
-/* Plan B: leer la playlist desde el reproductor (máximo 200 videos) */
 function obtenerIds(pl) {
   return new Promise((ok) => {
     if (!window.YT || !YT.Player) return ok(null);
@@ -555,10 +616,10 @@ function obtenerIds(pl) {
 
 async function buscar() {
   const url = $('bin').value.trim();
-  const tubi = parseTubi(url);
-  if (tubi) {
+  const appItem = parseAppItem(url);
+  if (appItem) {
     resEsLista = false;
-    resultados = [tubi];
+    resultados = [appItem];
     pintarResultados();
     return;
   }
@@ -567,7 +628,7 @@ async function buscar() {
   resEsLista = !!pl && !(/^RD/.test(pl) && id);
   if (!resEsLista && !id) {
     resultados = [];
-    $('bCont').innerHTML = '<p class="gris">Pega un enlace de YouTube (video o playlist) o de Tubi y toca 🔍.</p>';
+    $('bCont').innerHTML = '<p class="gris">Pega un enlace de YouTube (video o playlist) o de Tubi, Pluto TV, ViX, Mercado Play, Internet Archive o Plex y toca 🔍.</p>';
     return;
   }
   $('bCont').innerHTML = '<div class="spin">⏳</div>';
@@ -588,11 +649,11 @@ function pintarResultados() {
   const boton = resEsLista
     ? `<div class="imp"><button onclick="importarTodo()" ${importando ? 'disabled' : ''}>${importando ? '⏳' : '＋'} Importar Lista de Reproducción</button></div>` : '';
   $('bCont').innerHTML = boton + resultados.map((v, i) => {
-    const esTubi = v.fuente === 'tubi';
-    const miniHtml = esTubi
-      ? `<div class="mini tubiMini" onclick="cargarResultado(${i})"></div>`
+    const esApp = v.fuente && v.fuente !== 'yt';
+    const miniHtml = esApp
+      ? `<div class="mini appMini" onclick="cargarResultado(${i})"></div>`
       : `<div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="cargarResultado(${i})"></div>`;
-    return `<div class="res">${miniHtml}<div class="rt"><div>${esTubi ? '<span class="tbadge">TUBI</span> ' : ''}${esc(v.titulo)}</div><button onclick="anadir(${i})">＋ Añadir a Lista de Reproducción</button><button onclick="sugerir(${i})">› Sugerir</button></div></div>`;
+    return `<div class="res">${miniHtml}<div class="rt"><div>${esApp ? badgeHtml(v.fuente) + ' ' : ''}${esc(v.titulo)}</div><button onclick="anadir(${i})">＋ Añadir a Lista de Reproducción</button><button onclick="sugerir(${i})">› Sugerir</button></div></div>`;
   }).join('');
 }
 function cargarResultado(i) {
@@ -620,7 +681,7 @@ function sugerir(i) {
 
 /* ---------- Lista de reproducción ---------- */
 function miniCardHtml(v, onclickAttr) {
-  if (v.fuente === 'tubi') return `<div class="mini tubiMini" onclick="${onclickAttr}"></div>`;
+  if (v.fuente && v.fuente !== 'yt') return `<div class="mini appMini" onclick="${onclickAttr}"></div>`;
   return `<div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="${onclickAttr}"></div>`;
 }
 function renderLista() {
@@ -629,8 +690,10 @@ function renderLista() {
   if (!listaActual.length) { $('items').innerHTML = '<p class="gris">Esta lista de reproducción no tiene contenido.</p>'; return; }
   const html = listaActual.map((v, i) => ({ v, i }))
     .filter(x => !f || x.v.titulo.toLowerCase().includes(f))
-    .map(({ v, i }) =>
-      `<div class="card${i === posActual ? ' act' : ''}">${miniCardHtml(v, `socket.emit('reproducir',${i})`)}<div class="t" onclick="socket.emit('reproducir',${i})">${v.fuente === 'tubi' ? '<span class="tbadge" style="margin-right:6px">TUBI</span>' : ''}${esc(v.titulo)}</div><div class="acc"><button title="Editar título" onclick="editar(${i})">✎</button><button title="Quitar" onclick="socket.emit('quitar',${i})">✕</button></div></div>`).join('');
+    .map(({ v, i }) => {
+      const esApp = v.fuente && v.fuente !== 'yt';
+      return `<div class="card${i === posActual ? ' act' : ''}">${miniCardHtml(v, `socket.emit('reproducir',${i})`)}<div class="t" onclick="socket.emit('reproducir',${i})">${esApp ? badgeHtml(v.fuente) + ' ' : ''}${esc(v.titulo)}</div><div class="acc"><button title="Editar título" onclick="editar(${i})">✎</button><button title="Quitar" onclick="socket.emit('quitar',${i})">✕</button></div></div>`;
+    }).join('');
   $('items').innerHTML = html || '<p class="gris">No hay resultados.</p>';
   if (!f) {
     const a = $('items').querySelector('.act');
@@ -651,8 +714,10 @@ function editar(i) {
 function vaciarLista() { if (confirm('¿Vaciar toda la lista?')) socket.emit('vaciar'); }
 
 socket.on('historial', (l) => {
-  $('pHist').innerHTML = l.length ? l.map(v =>
-    `<div class="card">${miniCardHtml(v, `socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})`)}<div class="t" onclick="socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})">${v.fuente === 'tubi' ? '<span class="tbadge" style="margin-right:6px">TUBI</span>' : ''}${esc(v.titulo)}</div><div class="acc"><button title="Añadir a la lista" onclick="socket.emit('agregar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})">＋</button></div></div>`).join('')
+  $('pHist').innerHTML = l.length ? l.map(v => {
+    const esApp = v.fuente && v.fuente !== 'yt';
+    return `<div class="card">${miniCardHtml(v, `socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})`)}<div class="t" onclick="socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})">${esApp ? badgeHtml(v.fuente) + ' ' : ''}${esc(v.titulo)}</div><div class="acc"><button title="Añadir a la lista" onclick="socket.emit('agregar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})">＋</button></div></div>`;
+  }).join('')
     : '<p class="gris">Aún no hay historial.</p>';
 });
 
@@ -676,8 +741,8 @@ socket.on('chat', (m) => {
   ponerMsg(d);
 });
 socket.on('chatVideo', (v) => {
-  const f = v.fuente === 'tubi' ? 'tubi' : 'yt';
-  const badge = f === 'tubi' ? '<span class="tb">TUBI</span>' : '<span class="yt">▶</span>';
+  const f = v.fuente && v.fuente !== 'yt' ? v.fuente : 'yt';
+  const badge = f !== 'yt' ? chatBadgeHtml(f) : '<span class="yt">▶</span>';
   const d = document.createElement('div');
   d.className = 'msg vid';
   d.innerHTML = `${badge}<div><div>${v.nombre ? '<b>' + esc(v.nombre) + '</b> sugiere: ' : ''}<i>${esc(v.titulo)}</i></div><a href="#" onclick="socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${f}'});return false">Reproducir</a> | <a href="#" onclick="socket.emit('agregar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${f}'});return false">Añadir a la lista</a></div><small>${hora()}</small>`;
