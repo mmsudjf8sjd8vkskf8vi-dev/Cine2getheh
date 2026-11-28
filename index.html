@@ -22,15 +22,22 @@ button{background:#2b3648;color:#fff}
 
 /* Sala */
 #sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto}
-#vbox{width:100%;aspect-ratio:16/9;background:#000;flex:none}
+#vbox{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex:none}
 #vbox.mini{position:fixed;right:8px;bottom:8px;width:55%;max-width:320px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #000a}
+#player,#tubiBox{width:100%;height:100%}
+#tubiBox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px;text-align:center;background:radial-gradient(circle at top,#26163d,#090d16)}
+#tubiBox .tbadge{background:#a855f7;color:#fff;font-weight:bold;font-size:12px;padding:3px 9px;border-radius:999px}
+#tubiBox .ttit{font-size:15px;font-weight:bold;max-width:95%}
+#tubiBox .tbtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+#tubiBox .tbtns button{font-size:13px;padding:8px 12px}
 #ctl{display:flex;align-items:center;gap:6px;background:#0b0f19;padding:2px 8px;flex:none}
 #ctl button{background:none;padding:8px;font-size:18px}
 #tiempo{font-size:14px;min-width:46px}
 #seek{flex:1;padding:0;accent-color:#fbbf24;background:none;height:24px}
-#tb{display:flex;align-items:center;gap:2px;padding:4px 10px;flex:none}
+#tb{display:flex;align-items:center;gap:4px;padding:4px 10px;flex:none}
 #tb .sp{flex:1}
-#tb button{background:none;padding:8px 10px;font-size:19px}
+#tb button{background:none;padding:8px 10px;font-size:17px}
+#tb button.vipOn{background:#fbbf24;color:#000;border-radius:8px;font-size:13px;font-weight:bold;padding:6px 10px}
 #salaNombre{font-size:17px}
 #pages{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 #pages::-webkit-scrollbar{display:none}
@@ -44,8 +51,9 @@ button{background:#2b3648;color:#fff}
 .tile{position:relative;width:var(--t);height:var(--t);border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#1e3a8a,#6b21a8)}
 .tile .av{font-size:calc(var(--t)*.55);text-align:center;margin-top:calc(var(--t)*.1);opacity:.6}
 .tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
-.tile .nom{position:absolute;bottom:0;left:0;right:0;background:#15803d;text-align:center;padding:3px}
+.tile .nom{position:absolute;bottom:0;left:0;right:0;background:#15803d;text-align:center;padding:3px;font-size:14px}
 .tile .rey{position:absolute;top:6px;left:6px;font-size:20px;z-index:2}
+.tile .kick{position:absolute;top:6px;right:6px;z-index:3;background:#dc2626;color:#fff;font-size:12px;padding:4px 7px;border-radius:6px}
 .acciones{position:sticky;bottom:0;margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:6px;background:#111827;padding:8px 0}
 .grupo{display:flex;background:#1f2937;border-radius:8px}
 .grupo button{background:none;padding:10px 14px}
@@ -57,6 +65,7 @@ button{background:#2b3648;color:#fff}
 .msg b{color:#fbbf24}
 .vid{display:flex;gap:8px;align-items:flex-start}
 .vid .yt{background:#ff0033;color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none}
+.vid .tb{background:#a855f7;color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;flex:none;border:0;margin:0}
 .vid a{color:#93c5fd;font-size:13px}
 .vid small{margin-left:auto}
 .cin{display:flex;gap:6px;padding-top:6px;flex:none}
@@ -82,6 +91,7 @@ button{background:#2b3648;color:#fff}
 .card.act .t{text-decoration:underline}
 .mini{position:relative;width:100px;flex:none;background:#2b3648 center/cover no-repeat}
 .mini::after{content:'▶';position:absolute;inset:0;margin:auto;width:34px;height:34px;line-height:34px;text-align:center;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px}
+.mini.tubiMini{background:linear-gradient(135deg,#4c1d95,#1e1b4b)}
 .card .t{flex:1;display:flex;align-items:center;padding:8px 10px;font-size:14px;color:#d1d5db}
 .card .acc{display:flex;flex-direction:column;justify-content:space-between;padding:4px 6px}
 .card .acc button{background:none;padding:4px 6px;font-size:18px;color:#cbd5e1}
@@ -94,6 +104,7 @@ button{background:#2b3648;color:#fff}
 .bcaja button{background:none;padding:10px}
 .bic{background:#4b5563;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:12px;flex:none}
 .bic.yt{background:#ff0033;border-radius:6px;width:34px}
+.bic.tbi{background:#a855f7;border-radius:6px;width:36px}
 .bbtn{padding:10px 14px}
 .btabs{display:flex;gap:2px;overflow-x:auto;border-bottom:2px solid #1f2937;margin:10px 0}
 .btabs button{background:none;border-radius:0;color:#9ca3af;white-space:nowrap;font-size:15px;padding:10px}
@@ -105,6 +116,10 @@ button{background:#2b3648;color:#fff}
 .res .mini{width:110px;height:68px;border-radius:8px}
 .rt{flex:1;font-size:14px}
 .rt button{display:block;font-size:12px;padding:6px 10px;margin-top:6px}
+.tubiBoxIn{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:12px;margin-top:8px}
+.tubiBoxIn input{background:#111827;margin:6px 0}
+.tubiRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tubiRow button{font-size:14px;padding:10px 14px}
 .spin{text-align:center;padding:30px;font-size:28px}
 #toast{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#374151;color:#fff;padding:10px 16px;border-radius:10px;z-index:100;font-size:14px;max-width:90%}
 </style>
@@ -123,7 +138,18 @@ button{background:#2b3648;color:#fff}
 </div>
 
 <div id="sala" hidden>
-  <div id="vbox"><div id="player"></div></div>
+  <div id="vbox">
+    <div id="player"></div>
+    <div id="tubiBox" hidden>
+      <span class="tbadge">TUBI</span>
+      <div class="ttit" id="tubiActualTit">Contenido de Tubi</div>
+      <div class="gris" id="tubiActualUrl" style="font-size:12px;word-break:break-all"></div>
+      <div class="tbtns">
+        <button class="am" onclick="abrirTubiExterno()">▶ Abrir / Ver en Tubi</button>
+        <button onclick="copiarTubiEnlace()">📋 Copiar enlace</button>
+      </div>
+    </div>
+  </div>
   <div id="ctl">
     <button id="bPlay" onclick="playPausa()">▶</button>
     <span id="tiempo">00:00</span>
@@ -133,6 +159,7 @@ button{background:#2b3648;color:#fff}
   </div>
   <div id="tb">
     <span id="salaNombre"></span><span class="sp"></span>
+    <button id="bVip" onclick="socket.emit('toggleVip')" title="Modo VIP">VIP</button>
     <button onclick="abrirBuscador()">🔍</button>
     <button onclick="ajustes()">⚙</button>
   </div>
@@ -207,8 +234,24 @@ button{background:#2b3648;color:#fff}
     <button data-b="bApps">▦ Aplicaciones</button>
     <button data-b="bPant">🖥 Compartir pantalla</button>
   </div>
-  <div class="bpan on" id="bCont"><p class="gris">Pega un enlace de YouTube (video o playlist) y toca 🔍.</p></div>
-  <div class="bpan" id="bApps"><p class="gris">Las aplicaciones todavía no están disponibles.</p></div>
+  <div class="bpan on" id="bCont"><p class="gris">Pega un enlace de YouTube (video o playlist) o de Tubi y toca 🔍.</p></div>
+  <div class="bpan" id="bApps">
+    <div class="tubiBoxIn">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="bic tbi">TUBI</span>
+        <b>Tubi</b>
+      </div>
+      <p class="gris" style="font-size:13px;margin:8px 0">Pega un enlace o ID de película/serie de Tubi y opcionalmente un título para compartirlo con la sala.</p>
+      <input id="tubiUrl" placeholder="Ej. https://tubitv.com/movies/123456/titulo o ID">
+      <input id="tubiTit" placeholder="Título opcional (ej. Película en Tubi)">
+      <div class="tubiRow">
+        <button class="am" onclick="reproducirTubi()">▶ Cargar en sala</button>
+        <button onclick="agregarTubiLista()">＋ Añadir a lista</button>
+        <button onclick="sugerirTubiChat()">💬 Sugerir al chat</button>
+        <button onclick="window.open('https://tubitv.com','_blank','noopener')">↗ Abrir Tubi</button>
+      </div>
+    </div>
+  </div>
   <div class="bpan" id="bPant"><p class="gris">Compartir pantalla todavía no está disponible.</p></div>
 </div>
 
@@ -221,7 +264,8 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const socket = io();
 let yt, listo = false, ignorar = false, pendiente = null;
-let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
+let miId = null, sala = '', nombre = '', usuarios = [], camara = null, vipActivo = false;
+let fuenteActual = 'yt', tubiActual = null;
 let listaActual = [], posActual = -1, resultados = [], resEsLista = false;
 let importando = false, arrastrando = false, zoom = 150, tToast, velIdx = 0;
 const sal = {}, ent = {}, streams = {};
@@ -234,6 +278,10 @@ function aviso(t) {
   tToast = setTimeout(() => x.style.display = 'none', 3500);
 }
 socket.on('aviso', aviso);
+socket.on('expulsado', () => {
+  alert('Has sido expulsado de la sala por el anfitrión.');
+  location.href = location.pathname;
+});
 const hora = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /* ---------- Salas guardadas ---------- */
@@ -295,6 +343,85 @@ document.querySelectorAll('.stabs button').forEach(b => b.onclick = () => {
   if (b.dataset.s === 'pLista') renderLista();
 });
 
+/* ---------- Tubi helper ---------- */
+function parseTubi(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  if (/tubi/i.test(s)) {
+    const m = s.match(/tubitv\.com\/(?:movies|series|tv-shows|live)\/([^/?#]+)/i);
+    const id = m ? m[1] : s.replace(/^https?:\/\//i, '').slice(0, 80);
+    const url = /^https?:\/\//i.test(s) ? s : `https://tubitv.com/${id}`;
+    return { id, url, titulo: 'Tubi: ' + id, fuente: 'tubi' };
+  }
+  if (/^[\w-]{3,50}$/.test(s) && !/youtu/i.test(s)) {
+    return { id: s, url: `https://tubitv.com/movies/${encodeURIComponent(s)}`, titulo: 'Tubi: ' + s, fuente: 'tubi' };
+  }
+  return null;
+}
+
+function mostrarModoFuente(fuente, id, titulo) {
+  fuenteActual = fuente === 'tubi' ? 'tubi' : 'yt';
+  const esTubi = fuenteActual === 'tubi' && Boolean(id);
+  $('tubiBox').hidden = !esTubi;
+  if ($('player')) $('player').style.display = esTubi ? 'none' : 'block';
+  if (esTubi) {
+    const parsed = parseTubi(id) || { id, url: `https://tubitv.com/movies/${id}`, titulo: titulo || id };
+    tubiActual = { id: parsed.id, url: parsed.url, titulo: titulo || parsed.titulo };
+    $('tubiActualTit').textContent = tubiActual.titulo;
+    $('tubiActualUrl').textContent = tubiActual.url;
+    if (listo && yt && yt.pauseVideo) {
+      ignorar = true;
+      try { yt.pauseVideo(); } catch (e) {}
+      setTimeout(() => ignorar = false, 500);
+    }
+  } else {
+    tubiActual = null;
+  }
+}
+
+function abrirTubiExterno() {
+  if (!tubiActual) return;
+  window.open(tubiActual.url, '_blank', 'noopener');
+}
+function copiarTubiEnlace() {
+  if (!tubiActual) return;
+  if (navigator.clipboard) navigator.clipboard.writeText(tubiActual.url);
+  aviso('Enlace de Tubi copiado');
+}
+
+function datosTubiInput() {
+  const raw = $('tubiUrl').value.trim();
+  const parsed = parseTubi(raw);
+  if (!parsed) {
+    aviso('Pega un enlace válido o ID de Tubi');
+    return null;
+  }
+  const customTit = $('tubiTit').value.trim();
+  return {
+    id: parsed.id,
+    url: parsed.url,
+    titulo: customTit || parsed.titulo,
+    fuente: 'tubi'
+  };
+}
+function reproducirTubi() {
+  const d = datosTubiInput();
+  if (!d) return;
+  socket.emit('cargar', { id: d.id, titulo: d.titulo, fuente: 'tubi' });
+  cerrarBuscador();
+}
+function agregarTubiLista() {
+  const d = datosTubiInput();
+  if (!d) return;
+  socket.emit('agregar', { id: d.id, titulo: d.titulo, fuente: 'tubi' });
+}
+function sugerirTubiChat() {
+  const d = datosTubiInput();
+  if (!d) return;
+  socket.emit('sugerir', { id: d.id, titulo: d.titulo, fuente: 'tubi' });
+  aviso('Sugerencia de Tubi enviada al chat');
+}
+
 /* ---------- Reproductor YouTube + barra de control ---------- */
 function crearPlayer() {
   if (yt || !window.YT || !YT.Player || $('sala').hidden) return;
@@ -305,7 +432,7 @@ function crearPlayer() {
       onReady: () => { listo = true; if (pendiente) aplicar(pendiente); },
       onError: () => { aviso('Video no disponible aquí, saltando…'); socket.emit('fin', yt.getVideoData().video_id); },
       onStateChange: (e) => {
-        if (ignorar) return;
+        if (ignorar || fuenteActual === 'tubi') return;
         if (e.data === 0) { socket.emit('fin', yt.getVideoData().video_id); return; }
         if (e.data === 1 || e.data === 2) socket.emit('control', { play: e.data === 1, t: yt.getCurrentTime() });
       }
@@ -320,7 +447,21 @@ function idDe(url) {
 }
 
 function aplicar(e) {
+  if (typeof e.vip === 'boolean') {
+    vipActivo = e.vip;
+    $('bVip').classList.toggle('vipOn', vipActivo);
+    $('bVip').textContent = vipActivo ? 'VIP ON' : 'VIP';
+  }
+  const f = e.fuente === 'tubi' ? 'tubi' : 'yt';
+  if (f === 'tubi' && e.id) {
+    pendiente = null;
+    const item = listaActual.find(v => v.id === e.id && (v.fuente || 'yt') === 'tubi');
+    mostrarModoFuente('tubi', e.id, item ? item.titulo : 'Tubi: ' + e.id);
+    return;
+  }
+  mostrarModoFuente('yt', null, null);
   if (!listo) { pendiente = e; return; }
+  pendiente = null;
   if (!e.id) return;
   ignorar = true;
   const actual = yt.getVideoData && yt.getVideoData().video_id;
@@ -337,30 +478,34 @@ socket.on('estado', aplicar);
 
 const fmt = (s) => { s = Math.floor(s || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
 setInterval(() => {
-  if (!listo || !yt.getPlayerState) return;
+  if (!listo || !yt.getPlayerState || fuenteActual === 'tubi') return;
   const d = yt.getDuration() || 0, c = yt.getCurrentTime() || 0;
   if (!arrastrando) { $('seek').max = d || 100; $('seek').value = c; $('tiempo').textContent = fmt(c); }
   $('bPlay').textContent = yt.getPlayerState() === 1 ? '⏸' : '▶';
 }, 500);
 $('seek').addEventListener('input', () => { arrastrando = true; $('tiempo').textContent = fmt(+$('seek').value); });
 $('seek').addEventListener('change', () => {
-  if (listo) {
+  if (listo && fuenteActual !== 'tubi') {
     const st = yt.getPlayerState();
     yt.seekTo(+$('seek').value, true);
     socket.emit('control', { play: st === 1 || st === 3, t: +$('seek').value });
   }
   arrastrando = false;
 });
-function playPausa() { if (!listo) return; yt.getPlayerState() === 1 ? yt.pauseVideo() : yt.playVideo(); }
-function velocidad() {
+function playPausa() {
+  if (fuenteActual === 'tubi') return abrirTubiExterno();
   if (!listo) return;
+  yt.getPlayerState() === 1 ? yt.pauseVideo() : yt.playVideo();
+}
+function velocidad() {
+  if (!listo || fuenteActual === 'tubi') return;
   const v = [1, 1.25, 1.5, 2, 0.75];
   velIdx = (velIdx + 1) % v.length;
   yt.setPlaybackRate(v[velIdx]);
   aviso('Velocidad ' + v[velIdx] + 'x (solo para ti)');
 }
 function volumen() {
-  if (!listo) return;
+  if (!listo || fuenteActual === 'tubi') return;
   if (yt.isMuted()) { yt.unMute(); $('bVol').textContent = '🔊'; }
   else { yt.mute(); $('bVol').textContent = '🔇'; }
 }
@@ -368,9 +513,13 @@ function volumen() {
 /* ---------- Buscador (Contenido / Aplicaciones / Compartir pantalla) ---------- */
 function abrirBuscador() { $('buscador').hidden = false; $('vbox').classList.add('mini'); $('bin').focus(); }
 function cerrarBuscador() { $('buscador').hidden = true; $('vbox').classList.remove('mini'); }
-$('bin').addEventListener('input', () => $('bic').classList.toggle('yt', /youtu/.test($('bin').value)));
+$('bin').addEventListener('input', () => {
+  const val = $('bin').value;
+  $('bic').classList.toggle('yt', /youtu/.test(val));
+  $('bic').classList.toggle('tbi', /tubi/i.test(val));
+});
 $('bin').addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
-$('bclear').onclick = () => { $('bin').value = ''; $('bic').classList.remove('yt'); $('bin').focus(); };
+$('bclear').onclick = () => { $('bin').value = ''; $('bic').classList.remove('yt', 'tbi'); $('bin').focus(); };
 $('btabs').onclick = (e) => {
   const t = e.target.dataset.b; if (!t) return;
   document.querySelectorAll('.btabs button,.bpan').forEach(x => x.classList.remove('on'));
@@ -406,12 +555,19 @@ function obtenerIds(pl) {
 
 async function buscar() {
   const url = $('bin').value.trim();
+  const tubi = parseTubi(url);
+  if (tubi) {
+    resEsLista = false;
+    resultados = [tubi];
+    pintarResultados();
+    return;
+  }
   const pl = (url.match(/[?&]list=([\w-]+)/) || [])[1];
   const id = idDe(url);
   resEsLista = !!pl && !(/^RD/.test(pl) && id);
   if (!resEsLista && !id) {
     resultados = [];
-    $('bCont').innerHTML = '<p class="gris">Pega un enlace de YouTube (video o playlist) y toca 🔍. La búsqueda por texto no está disponible.</p>';
+    $('bCont').innerHTML = '<p class="gris">Pega un enlace de YouTube (video o playlist) o de Tubi y toca 🔍.</p>';
     return;
   }
   $('bCont').innerHTML = '<div class="spin">⏳</div>';
@@ -419,10 +575,8 @@ async function buscar() {
     socket.emit('titulos', [id], (res) => { resultados = res; pintarResultados(); });
     return;
   }
-  // 1) El servidor lee la playlist completa (hasta 500 videos)
   socket.emit('playlist', pl, async (res) => {
     if (res && res.length) { resultados = res; pintarResultados(); return; }
-    // 2) Plan B: leerla desde el reproductor (máximo 200)
     const ids = await obtenerIds(pl);
     if (!ids) { $('bCont').innerHTML = '<p class="gris">No se pudo leer la playlist. ¿Es pública?</p>'; return; }
     aviso('Solo se pudieron leer los primeros 200 videos');
@@ -433,18 +587,42 @@ function pintarResultados() {
   if (!resultados.length) { $('bCont').innerHTML = '<p class="gris">No se encontró nada (¿video privado o borrado?).</p>'; return; }
   const boton = resEsLista
     ? `<div class="imp"><button onclick="importarTodo()" ${importando ? 'disabled' : ''}>${importando ? '⏳' : '＋'} Importar Lista de Reproducción</button></div>` : '';
-  $('bCont').innerHTML = boton + resultados.map((v, i) =>
-    `<div class="res"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('cargar','${esc(v.id)}')"></div><div class="rt"><div>${esc(v.titulo)}</div><button onclick="anadir(${i})">＋ Añadir a Lista de Reproducción</button><button onclick="sugerir(${i})">› Sugerir</button></div></div>`).join('');
+  $('bCont').innerHTML = boton + resultados.map((v, i) => {
+    const esTubi = v.fuente === 'tubi';
+    const miniHtml = esTubi
+      ? `<div class="mini tubiMini" onclick="cargarResultado(${i})"></div>`
+      : `<div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="cargarResultado(${i})"></div>`;
+    return `<div class="res">${miniHtml}<div class="rt"><div>${esTubi ? '<span class="tbadge">TUBI</span> ' : ''}${esc(v.titulo)}</div><button onclick="anadir(${i})">＋ Añadir a Lista de Reproducción</button><button onclick="sugerir(${i})">› Sugerir</button></div></div>`;
+  }).join('');
+}
+function cargarResultado(i) {
+  const v = resultados[i];
+  if (!v) return;
+  socket.emit('cargar', { id: v.id, titulo: v.titulo, fuente: v.fuente || 'yt' });
+  cerrarBuscador();
 }
 function importarTodo() {
   if (importando) return;
   importando = true; pintarResultados();
   socket.emit('importar', resultados, () => { importando = false; pintarResultados(); });
 }
-function anadir(i) { socket.emit('agregar', resultados[i].id); }
-function sugerir(i) { socket.emit('sugerir', resultados[i]); aviso('Sugerencia enviada al chat'); }
+function anadir(i) {
+  const v = resultados[i];
+  if (!v) return;
+  socket.emit('agregar', { id: v.id, titulo: v.titulo, fuente: v.fuente || 'yt' });
+}
+function sugerir(i) {
+  const v = resultados[i];
+  if (!v) return;
+  socket.emit('sugerir', { id: v.id, titulo: v.titulo, fuente: v.fuente || 'yt' });
+  aviso('Sugerencia enviada al chat');
+}
 
 /* ---------- Lista de reproducción ---------- */
+function miniCardHtml(v, onclickAttr) {
+  if (v.fuente === 'tubi') return `<div class="mini tubiMini" onclick="${onclickAttr}"></div>`;
+  return `<div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="${onclickAttr}"></div>`;
+}
 function renderLista() {
   const f = $('filtro').value.trim().toLowerCase();
   $('cuenta').textContent = listaActual.length ? listaActual.length + ' videos' : '';
@@ -452,7 +630,7 @@ function renderLista() {
   const html = listaActual.map((v, i) => ({ v, i }))
     .filter(x => !f || x.v.titulo.toLowerCase().includes(f))
     .map(({ v, i }) =>
-      `<div class="card${i === posActual ? ' act' : ''}"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('reproducir',${i})"></div><div class="t" onclick="socket.emit('reproducir',${i})">${esc(v.titulo)}</div><div class="acc"><button title="Editar título" onclick="editar(${i})">✎</button><button title="Quitar" onclick="socket.emit('quitar',${i})">✕</button></div></div>`).join('');
+      `<div class="card${i === posActual ? ' act' : ''}">${miniCardHtml(v, `socket.emit('reproducir',${i})`)}<div class="t" onclick="socket.emit('reproducir',${i})">${v.fuente === 'tubi' ? '<span class="tbadge" style="margin-right:6px">TUBI</span>' : ''}${esc(v.titulo)}</div><div class="acc"><button title="Editar título" onclick="editar(${i})">✎</button><button title="Quitar" onclick="socket.emit('quitar',${i})">✕</button></div></div>`).join('');
   $('items').innerHTML = html || '<p class="gris">No hay resultados.</p>';
   if (!f) {
     const a = $('items').querySelector('.act');
@@ -474,7 +652,7 @@ function vaciarLista() { if (confirm('¿Vaciar toda la lista?')) socket.emit('va
 
 socket.on('historial', (l) => {
   $('pHist').innerHTML = l.length ? l.map(v =>
-    `<div class="card"><div class="mini" style="background-image:url(https://i.ytimg.com/vi/${esc(v.id)}/mqdefault.jpg)" onclick="socket.emit('cargar','${esc(v.id)}')"></div><div class="t" onclick="socket.emit('cargar','${esc(v.id)}')">${esc(v.titulo)}</div><div class="acc"><button title="Añadir a la lista" onclick="socket.emit('agregar','${esc(v.id)}')">＋</button></div></div>`).join('')
+    `<div class="card">${miniCardHtml(v, `socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})`)}<div class="t" onclick="socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})">${v.fuente === 'tubi' ? '<span class="tbadge" style="margin-right:6px">TUBI</span>' : ''}${esc(v.titulo)}</div><div class="acc"><button title="Añadir a la lista" onclick="socket.emit('agregar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${v.fuente || 'yt'}'})">＋</button></div></div>`).join('')
     : '<p class="gris">Aún no hay historial.</p>';
 });
 
@@ -498,9 +676,11 @@ socket.on('chat', (m) => {
   ponerMsg(d);
 });
 socket.on('chatVideo', (v) => {
+  const f = v.fuente === 'tubi' ? 'tubi' : 'yt';
+  const badge = f === 'tubi' ? '<span class="tb">TUBI</span>' : '<span class="yt">▶</span>';
   const d = document.createElement('div');
   d.className = 'msg vid';
-  d.innerHTML = `<span class="yt">▶</span><div><div>${v.nombre ? '<b>' + esc(v.nombre) + '</b> sugiere: ' : ''}<i>${esc(v.titulo)}</i></div><a href="#" onclick="socket.emit('cargar','${esc(v.id)}');return false">Reproducir</a> | <a href="#" onclick="socket.emit('agregar','${esc(v.id)}');return false">Añadir a la lista</a></div><small>${hora()}</small>`;
+  d.innerHTML = `${badge}<div><div>${v.nombre ? '<b>' + esc(v.nombre) + '</b> sugiere: ' : ''}<i>${esc(v.titulo)}</i></div><a href="#" onclick="socket.emit('cargar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${f}'});return false">Reproducir</a> | <a href="#" onclick="socket.emit('agregar',{id:'${esc(v.id)}',titulo:'${esc(v.titulo)}',fuente:'${f}'});return false">Añadir a la lista</a></div><small>${hora()}</small>`;
   ponerMsg(d);
 });
 ['😀','😂','😍','😮','😢','😡','👍','👏','🔥','❤️','🎉','🍿','🎬','😎','🤩','😱','🙌','💀','🥹','🤔'].forEach(e => {
@@ -516,9 +696,19 @@ function zoomTiles(d) {
   zoom = Math.min(260, Math.max(90, zoom + d * 30));
   document.documentElement.style.setProperty('--t', zoom + 'px');
 }
+function expulsarUsuario(id, nom) {
+  if (confirm(`¿Expulsar a ${nom} de la sala?`)) {
+    socket.emit('expulsar', id);
+  }
+}
 function pintarUsuarios() {
-  $('tiles').innerHTML = usuarios.map(u =>
-    `<div class="tile"><div class="av">👤</div><video id="v-${u.id}" autoplay playsinline></video>${u.host ? '<span class="rey">👑</span>' : ''}<div class="nom">${esc(u.nombre)}</div></div>`).join('');
+  const yoHost = Boolean(usuarios.find(u => u.id === miId && u.host));
+  $('tiles').innerHTML = usuarios.map(u => {
+    const btnKick = (yoHost && u.id !== miId)
+      ? `<button class="kick" title="Expulsar" onclick="expulsarUsuario('${u.id}','${esc(u.nombre)}')">✕</button>`
+      : '';
+    return `<div class="tile"><div class="av">👤</div><video id="v-${u.id}" autoplay playsinline></video>${u.host ? '<span class="rey">👑</span>' : ''}${btnKick}<div class="nom">${esc(u.nombre)}</div></div>`;
+  }).join('');
   for (const id in streams) {
     const v = $('v-' + id);
     if (v) { v.srcObject = streams[id]; v.muted = (id === miId); v.style.display = 'block'; }
@@ -541,7 +731,7 @@ async function enviarA(id) {
   if (!camara || sal[id]) return;
   const pc = sal[id] = nuevoPc();
   camara.getTracks().forEach(t => pc.addTrack(t, camara));
-  pc.onicecandidate = (e) => e.candidate && socket.emit('senal', { para: id, tipo: 'candA', datos: e.candidate.toJSON() });
+  pc.onicecandidate = (e) => e.candidate && socket.emit('senal', { para: id, tipo: 'candA', datos: e.candidate.JSON() });
   await pc.setLocalDescription(await pc.createOffer());
   socket.emit('senal', { para: id, tipo: 'oferta', datos: desc(pc) });
 }
@@ -551,7 +741,7 @@ socket.on('senal', async ({ de, tipo, datos }) => {
     if (tipo === 'oferta') {
       if (ent[de]) ent[de].close();
       const pc = ent[de] = nuevoPc();
-      pc.onicecandidate = (e) => e.candidate && socket.emit('senal', { para: de, tipo: 'candB', datos: e.candidate.toJSON() });
+      pc.onicecandidate = (e) => e.candidate && socket.emit('senal', { para: de, tipo: 'candB', datos: e.candidate.JSON() });
       pc.ontrack = (e) => { streams[de] = e.streams[0]; pintarUsuarios(); };
       await pc.setRemoteDescription(datos);
       pc.pend.forEach(c => pc.addIceCandidate(c)); pc.pend = [];
