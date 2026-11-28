@@ -24,11 +24,13 @@ button{background:#2b3648;color:#fff}
 #sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto;position:relative}
 #vbox{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex:none}
 #vbox.mini{position:fixed;right:8px;bottom:8px;width:55%;max-width:320px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #000a}
+#vbox.pipFlotante{position:fixed;right:10px;top:10px;width:54%;max-width:280px;z-index:85;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px #000c;border:1px solid rgba(255,255,255,.15)}
 #vbox.fullFallback{position:fixed;inset:0;width:100vw;height:100vh;aspect-ratio:auto;z-index:95}
 #player,#extFrame{width:100%;height:100%;border:0}
 #extBar{position:absolute;top:6px;left:6px;right:6px;display:flex;align-items:center;gap:6px;background:rgba(11,15,25,.82);padding:4px 8px;border-radius:8px;z-index:5}
 #extBar span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 #extBar button{font-size:12px;padding:4px 8px;border-radius:6px;flex:none}
+#unmuteBtn{position:absolute;right:10px;bottom:10px;z-index:12;background:#fbbf24;color:#000;font-weight:bold;font-size:13px;padding:7px 12px;border-radius:8px;box-shadow:0 4px 12px #0009}
 .tbadge{display:inline-block;background:#a855f7;color:#fff;font-weight:bold;font-size:11px;padding:2px 7px;border-radius:999px}
 .tbadge.pluto{background:#2563eb}
 .tbadge.vix{background:#ea580c}
@@ -172,6 +174,7 @@ button{background:#2b3648;color:#fff}
 <div id="sala" hidden>
   <div id="vbox">
     <div id="player"></div>
+    <button id="unmuteBtn" hidden onclick="activarSonido()">🔊 Activar sonido</button>
     <div id="extBar" hidden>
       <span id="appBadge" class="tbadge">APP</span>
       <span id="appActualTit">Contenido</span>
@@ -188,6 +191,7 @@ button{background:#2b3648;color:#fff}
     <button onclick="velocidad()" title="Velocidad">⚙</button>
     <button id="bVol" onclick="volumen()" title="Volumen">🔊</button>
     <button onclick="forzarSync()" title="Sincronizar ahora">🔄</button>
+    <button id="bPip" onclick="alternarPip()" title="Imagen en imagen (PiP)">⧉</button>
     <button id="bFull" onclick="pantallaCompleta()" title="Pantalla completa">⛶</button>
   </div>
   <div id="tb">
@@ -317,7 +321,7 @@ let miId = null, sala = '', nombre = '', usuarios = [], camara = null;
 let fuenteActual = 'yt', appActual = null, ultimoEstado = null;
 let listaActual = [], posActual = -1, resultados = [], resEsLista = false;
 let importando = false, arrastrando = false, zoom = 150, tToast, velIdx = 0, calIdx = 0;
-let modoGaming = false, fullRespaldo = false;
+let modoGaming = false, fullRespaldo = false, pipFlotante = false;
 const sal = {}, ent = {}, streams = {};
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 const CALIDADES = [
@@ -395,7 +399,25 @@ function ajustes() {
 }
 socket.on('connect', () => { miId = socket.id; if (sala) socket.emit('entrar', { sala, nombre }); });
 
-/* ---------- Pantalla completa y modo "como jugando" ---------- */
+/* ---------- PiP, pantalla completa y modo "como jugando" ---------- */
+function alternarPip() {
+  pipFlotante = !pipFlotante;
+  $('vbox').classList.toggle('pipFlotante', pipFlotante);
+  $('bPip').classList.toggle('onModo', pipFlotante);
+  aviso(pipFlotante ? 'Imagen en imagen (PiP) activada' : 'Vista normal del reproductor');
+}
+
+function activarSonido() {
+  if (!listo || !yt || fuenteActual !== 'yt') return;
+  try {
+    yt.unMute();
+    yt.setVolume(100);
+    yt.playVideo();
+  } catch (e) {}
+  $('unmuteBtn').hidden = true;
+  $('bVol').textContent = '🔊';
+}
+
 function modoJuego() {
   modoGaming = !modoGaming;
   $('sala').classList.toggle('gaming', modoGaming);
@@ -493,6 +515,7 @@ function mostrarModoFuente(fuente, id, titulo) {
   $('extBar').hidden = !esApp;
   $('extFrame').hidden = !esApp;
   if ($('player')) $('player').style.display = esApp ? 'none' : 'block';
+  if (esApp) $('unmuteBtn').hidden = true;
 
   if (esApp) {
     const meta = APPS_META[fuente];
@@ -575,6 +598,11 @@ function crearPlayer() {
         socket.emit('fin', yt.getVideoData().video_id);
       },
       onStateChange: (e) => {
+        if (e.data === 1 && yt.isMuted && yt.isMuted()) {
+          $('unmuteBtn').hidden = false;
+        } else if (e.data === 1 && yt.isMuted && !yt.isMuted()) {
+          $('unmuteBtn').hidden = true;
+        }
         if (ignorar || fuenteActual !== 'yt') return;
         if (e.data === 0) { socket.emit('fin', yt.getVideoData().video_id); return; }
         if (e.data === 1 || e.data === 2) {
@@ -589,6 +617,19 @@ function onYouTubeIframeAPIReady() { crearPlayer(); }
 function idDe(url) {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
   return m ? m[1] : null;
+}
+
+function reproducirConRespaldoMute(id, t) {
+  yt.loadVideoById(id, t);
+  setTimeout(() => {
+    try {
+      if (yt.getPlayerState && yt.getPlayerState() !== 1) {
+        yt.mute();
+        yt.playVideo();
+        $('unmuteBtn').hidden = false;
+      }
+    } catch (e) {}
+  }, 500);
 }
 
 function aplicar(e, forzarAjuste = false) {
@@ -609,13 +650,24 @@ function aplicar(e, forzarAjuste = false) {
   aplicarCalidadActual();
   const actual = yt.getVideoData && yt.getVideoData().video_id;
   if (actual !== e.id) {
-    yt.loadVideoById(e.id, e.t);
-    if (!e.play) setTimeout(() => yt.pauseVideo(), 450);
+    if (e.play) reproducirConRespaldoMute(e.id, e.t || 0);
+    else { yt.loadVideoById(e.id, e.t || 0); setTimeout(() => yt.pauseVideo(), 450); }
   } else {
     const diff = Math.abs((yt.getCurrentTime() || 0) - (e.t || 0));
     if (forzarAjuste || diff > 0.8) yt.seekTo(e.t || 0, true);
     const st = yt.getPlayerState();
-    if (e.play && st !== 1) yt.playVideo();
+    if (e.play && st !== 1) {
+      yt.playVideo();
+      setTimeout(() => {
+        try {
+          if (yt.getPlayerState() !== 1) {
+            yt.mute();
+            yt.playVideo();
+            $('unmuteBtn').hidden = false;
+          }
+        } catch (err) {}
+      }, 450);
+    }
     if (!e.play && st === 1) yt.pauseVideo();
   }
   setTimeout(() => { ignorar = false; }, 900);
@@ -676,7 +728,7 @@ function velocidad() {
 }
 function volumen() {
   if (!listo || fuenteActual !== 'yt') return;
-  if (yt.isMuted()) { yt.unMute(); $('bVol').textContent = '🔊'; }
+  if (yt.isMuted()) { yt.unMute(); $('bVol').textContent = '🔊'; $('unmuteBtn').hidden = true; }
   else { yt.mute(); $('bVol').textContent = '🔇'; }
 }
 
