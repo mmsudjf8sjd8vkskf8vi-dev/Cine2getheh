@@ -44,7 +44,8 @@ button{background:#252f44;color:#e5e7eb;cursor:pointer}
 #sala{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:700px;margin:auto;position:relative;background:#111622}
 #vbox{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex:none}
 #vbox.mini{position:fixed;right:8px;bottom:8px;width:54%;max-width:300px;z-index:80;border-radius:8px;overflow:hidden;box-shadow:0 6px 20px #000b}
-#vbox.pipFlotante{position:fixed;right:10px;top:10px;width:54%;max-width:270px;z-index:85;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px #000c;border:1px solid rgba(255,255,255,.16)}
+#vbox.pipFlotante{position:fixed;right:10px;top:10px;left:auto;bottom:auto;width:54%;max-width:270px;z-index:85;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px #000c;border:1px solid rgba(255,255,255,.16);touch-action:none;cursor:grab}
+#vbox.pipFlotante:active{cursor:grabbing}
 #vbox.fullFallback{position:fixed;inset:0;width:100vw;height:100vh;aspect-ratio:auto;z-index:95}
 #pipCerrar{display:none;position:absolute;top:6px;left:6px;z-index:20;background:rgba(11,15,25,.85);color:#fff;font-size:13px;padding:4px 8px;border-radius:6px}
 #vbox.pipFlotante #pipCerrar{display:block}
@@ -483,16 +484,24 @@ function ajustes() {
 }
 socket.on('connect', () => { miId = socket.id; if (sala) socket.emit('entrar', { sala, nombre }); });
 
-/* ---------- PiP, pantalla completa y modo "como jugando" ---------- */
+/* ---------- PiP flotante arrastrable, pantalla completa y modo "como jugando" ---------- */
+function resetearPosicionPip() {
+  const box = $('vbox');
+  box.style.left = '';
+  box.style.top = '';
+  box.style.right = '';
+  box.style.bottom = '';
+}
 function actualizarEstadoPipUI() {
   $('vbox').classList.toggle('pipFlotante', pipFlotante);
   $('bPip').classList.toggle('onModo', pipFlotante);
   $('pipAviso').hidden = !pipFlotante;
+  if (!pipFlotante) resetearPosicionPip();
 }
 function alternarPip() {
   pipFlotante = !pipFlotante;
   actualizarEstadoPipUI();
-  aviso(pipFlotante ? 'Imagen en imagen (PiP) activada' : 'Vista normal del reproductor');
+  aviso(pipFlotante ? 'Arrastra la ventanita flotante donde quieras' : 'Vista normal del reproductor');
 }
 function cerrarPip() {
   pipFlotante = false;
@@ -502,6 +511,46 @@ function cerrarPip() {
   }
   aviso('Ventanita cerrada');
 }
+
+(function activarArrastrePip() {
+  const box = $('vbox');
+  let drag = null;
+
+  box.addEventListener('pointerdown', (e) => {
+    if (!pipFlotante) return;
+    if (e.target.closest('button')) return;
+    const rect = box.getBoundingClientRect();
+    drag = {
+      pointerId: e.pointerId,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top
+    };
+    box.style.left = rect.left + 'px';
+    box.style.top = rect.top + 'px';
+    box.style.right = 'auto';
+    box.style.bottom = 'auto';
+    try { box.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  box.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const rect = box.getBoundingClientRect();
+    const maxX = Math.max(6, window.innerWidth - rect.width - 6);
+    const maxY = Math.max(6, window.innerHeight - rect.height - 6);
+    const nx = Math.min(maxX, Math.max(6, e.clientX - drag.offsetX));
+    const ny = Math.min(maxY, Math.max(6, e.clientY - drag.offsetY));
+    box.style.left = nx + 'px';
+    box.style.top = ny + 'px';
+  });
+
+  function soltar(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    try { box.releasePointerCapture(e.pointerId); } catch (err) {}
+    drag = null;
+  }
+  box.addEventListener('pointerup', soltar);
+  box.addEventListener('pointercancel', soltar);
+})();
 
 function activarSonido() {
   if (!listo || !yt || fuenteActual !== 'yt') return;
