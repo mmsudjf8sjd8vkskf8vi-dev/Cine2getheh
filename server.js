@@ -1,291 +1,489 @@
+const path = require('path');
+const https = require('https');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+const PORT = process.env.PORT || 3000;
+
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
-const salas = {};
-const okId = (x) => typeof x === 'string' && /^[\w-]{11}$/.test(x);
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'índice.html'));
+});
 
-async function titulo(url, defecto) {
-  try {
-    const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(url));
-    const j = await r.json();
-    return j.title || defecto;
-  } catch (e) { return defecto; }
-}
-const tituloVideo = (id, def = id) => titulo('https://www.youtube.com/watch?v=' + id, def);
+const salas = new Map();
 
-/* ---------- Leer una playlist completa de YouTube ---------- */
-const CAB = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-  'Accept-Language': 'es-419,es;q=0.9',
-  'Cookie': 'CONSENT=YES+1; SOCS=CAI'
-};
-
-function recoger(obj, out, cont) {
-  if (!obj || typeof obj !== 'object') return;
-  if (Array.isArray(obj)) { obj.forEach(x => recoger(x, out, cont)); return; }
-  if (obj.playlistVideoRenderer) {
-    const r = obj.playlistVideoRenderer;
-    const t = r.title && (r.title.runs ? r.title.runs.map(x => x.text).join('') : r.title.simpleText);
-    if (r.videoId && t && r.isPlayable !== false) out.push({ id: r.videoId, titulo: t });
-    else out.omitidos = (out.omitidos || 0) + 1;
-  }
-  if (obj.continuationItemRenderer) {
-    const tk = obj.continuationItemRenderer.continuationEndpoint &&
-      obj.continuationItemRenderer.continuationEndpoint.continuationCommand &&
-      obj.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
-    if (tk) cont.push(tk);
-  }
-  if (obj.lockupViewModel) {
-    const l = obj.lockupViewModel;
-    const m2 = l.metadata && l.metadata.lockupMetadataViewModel;
-    const tl = m2 && m2.title && m2.title.content;
-    if (l.contentId && tl && /VIDEO/.test(String(l.contentType || ''))) (out.alt = out.alt || []).push({ id: l.contentId, titulo: tl });
-  }
-  for (const k in obj) {
-    if (/(Renderer|ViewModel)$/.test(k)) { out.tipos = out.tipos || {}; out.tipos[k] = (out.tipos[k] || 0) + 1; }
-    if (obj[k] && typeof obj[k] === 'object') recoger(obj[k], out, cont);
-  }
-}
-
-async function leerPlaylist(pl) {
-  const out = [], cont = [];
-  let key = null, ver = '2.20240101.00.00', token = null;
-
-  // Intento 1: leer la página de la playlist
-  try {
-    const r = await fetch('https://www.youtube.com/playlist?list=' + pl, { headers: CAB, signal: AbortSignal.timeout(15000) });
-    const html = await r.text();
-    console.log('Playlist: pagina recibida, status ' + r.status + ', largo ' + html.length + ', trae playlistVideoRenderer: ' + html.includes('playlistVideoRenderer'));
-    const m = html.match(/ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s);
-    if (m) {
-      key = (html.match(/"INNERTUBE_API_KEY":"([^"]+)"/) || [])[1];
-      ver = (html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/) || [])[1] || ver;
-      recoger(JSON.parse(m[1]), out, cont);
-      token = cont[0];
-    } else {
-      console.log('Playlist: YouTube no devolvió los datos de la página (status ' + r.status + ')');
-    }
-  } catch (e) { console.log('Playlist: falló la página:', e.message); }
-
-  if (!key) key = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
-  const llamar = async (extra) => {
-    const rr = await fetch('https://www.youtube.com/youtubei/v1/browse?key=' + key, {
-      method: 'POST',
-      headers: { ...CAB, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: ver, hl: 'es', gl: 'US' } }, ...extra }),
-      signal: AbortSignal.timeout(15000)
-    });
-    return rr.json();
+function crearSala(codigo) {
+  return {
+    codigo,
+    usuarios: new Map(), // socketId -> { id, nombre, host }
+    vip: false,
+    items: [],          // [{ id, titulo, fuente }]
+    pos: -1,
+    historial: [],    // [{ id, titulo, fuente }]
+    estado: { id: null, fuente: 'yt', play: false, t: 0, ts: Date.now() }
   };
+}
 
-  // Intento 2: pedirla directo a la API de YouTube
-  if (!out.length) {
-    try {
-      const c1 = [];
-      recoger(await llamar({ browseId: 'VL' + pl }), out, c1);
-      token = c1[0];
-      if (!out.length) console.log('Playlist: la API directa tampoco devolvió videos');
-    } catch (e) { console.log('Playlist: falló la API directa:', e.message); }
+function obtenerSala(codigo) {
+  if (!salas.has(codigo)) salas.set(codigo, crearSala(codigo));
+  return salas.get(codigo);
+}
+
+function esHost(salaObj, socketId) {
+  return Boolean(salaObj.usuarios.get(socketId)?.host);
+}
+
+function puedeControlar(salaObj, socketId) {
+  if (!salaObj.vip) return true;
+  return esHost(salaObj, socketId);
+}
+
+function tiempoActual(salaObj) {
+  const e = salaObj.estado;
+  if (!e.id || !e.play) return e.t || 0;
+  const delta = (Date.now() - (e.ts || Date.now())) / 1000;
+  return Math.max(0, (e.t || 0) + delta);
+}
+
+function emitirEstado(salaObj, target = null) {
+  const payload = {
+    id: salaObj.estado.id,
+    fuente: salaObj.estado.fuente || 'yt',
+    play: Boolean(salaObj.estado.play),
+    t: tiempoActual(salaObj),
+    vip: Boolean(salaObj.vip)
+  };
+  if (target) target.emit('estado', payload);
+  else io.to(salaObj.codigo).emit('estado', payload);
+}
+
+function emitirUsuarios(salaObj) {
+  const lista = Array.from(salaObj.usuarios.values());
+  io.to(salaObj.codigo).emit('usuarios', lista);
+}
+
+function emitirLista(salaObj, target = null) {
+  const payload = { items: salaObj.items, pos: salaObj.pos };
+  if (target) target.emit('lista', payload);
+  else io.to(salaObj.codigo).emit('lista', payload);
+}
+
+function emitirHistorial(salaObj, target = null) {
+  if (target) target.emit('historial', salaObj.historial);
+  else io.to(salaObj.codigo).emit('historial', salaObj.historial);
+}
+
+function agregarHistorial(salaObj, video) {
+  if (!video || !video.id) return;
+  const item = {
+    id: String(video.id),
+    titulo: String(video.titulo || video.id),
+    fuente: video.fuente === 'tubi' ? 'tubi' : 'yt'
+  };
+  salaObj.historial = [
+    item,
+    ...salaObj.historial.filter(v => !(v.id === item.id && v.fuente === item.fuente))
+  ].slice(0, 50);
+  emitirHistorial(salaObj);
+}
+
+function reproducirIndice(salaObj, idx) {
+  if (!salaObj.items.length) return;
+  const i = ((idx % salaObj.items.length) + salaObj.items.length) % salaObj.items.length;
+  salaObj.pos = i;
+  const v = salaObj.items[i];
+  const fuente = v.fuente === 'tubi' ? 'tubi' : 'yt';
+  salaObj.estado = { id: v.id, fuente, play: true, t: 0, ts: Date.now() };
+  agregarHistorial(salaObj, v);
+  emitirLista(salaObj);
+  emitirEstado(salaObj);
+}
+
+function cargarVideoDirecto(salaObj, id, titulo = null, fuente = 'yt') {
+  if (!id) return;
+  const limpio = String(id).trim();
+  if (!limpio) return;
+  const src = fuente === 'tubi' ? 'tubi' : 'yt';
+  const idx = salaObj.items.findIndex(v => v.id === limpio && (v.fuente || 'yt') === src);
+  if (idx !== -1) salaObj.pos = idx;
+  salaObj.estado = { id: limpio, fuente: src, play: true, t: 0, ts: Date.now() };
+  agregarHistorial(salaObj, { id: limpio, titulo: titulo || limpio, fuente: src });
+  emitirLista(salaObj);
+  emitirEstado(salaObj);
+}
+
+/* ---------- Consulta YouTube (sin API key) ---------- */
+function fetchTexto(url, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    if (redirects > 5) return reject(new Error('Demasiadas redirecciones'));
+    const req = https.get(
+      url,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept-Language': 'es-419,es;q=0.9,en;q=0.8'
+        }
+      },
+      (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const nextUrl = new URL(res.headers.location, url).toString();
+          res.resume();
+          return resolve(fetchTexto(nextUrl, redirects + 1));
+        }
+        let raw = '';
+        res.setEncoding('utf8');
+        res.on('data', chunk => { raw += chunk; });
+        res.on('end', () => resolve(raw));
+      }
+    );
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout')); });
+    req.on('error', reject);
+  });
+}
+
+async function obtenerTituloVideo(id) {
+  try {
+    const u = `https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + id)}&format=json`;
+    const txt = await fetchTexto(u);
+    const data = JSON.parse(txt);
+    return { id, titulo: data.title || id, fuente: 'yt' };
+  } catch (e) {
+    return { id, titulo: id, fuente: 'yt' };
   }
+}
 
-  // Pedir las siguientes tandas hasta terminar
-  let vueltas = 0;
-  while (token && out.length < 5000 && vueltas < 60) {
-    vueltas++;
-    try {
-      const c2 = [];
-      recoger(await llamar({ continuation: token }), out, c2);
-      token = c2[0];
-    } catch (e) { console.log('Playlist: se cortó en la vuelta ' + vueltas + ':', e.message); break; }
+async function obtenerTitulos(ids) {
+  const unicos = Array.from(new Set((ids || []).filter(Boolean).map(x => String(x).trim()))).slice(0, 200);
+  const res = [];
+  for (let i = 0; i < unicos.length; i += 8) {
+    const parcial = await Promise.all(unicos.slice(i, i + 8).map(obtenerTituloVideo));
+    res.push(...parcial);
   }
-
-  const fuente = out.length ? out : (out.alt || []);
-  const tipos = Object.entries(out.tipos || {}).sort((x, y) => y[1] - x[1]).slice(0, 12).map(([k, v]) => k + ':' + v).join(', ');
-  console.log('Playlist: leidos ' + out.length + ', alternos ' + (out.alt ? out.alt.length : 0) + ', omitidos ' + (out.omitidos || 0) + ', vueltas ' + vueltas + ', quedaba mas: ' + (token ? 'si' : 'no'));
-  console.log('Playlist: tipos encontrados -> ' + tipos);
-  const vistos = new Set();
-  return fuente.filter(v => okId(v.id) && !vistos.has(v.id) && vistos.add(v.id)).slice(0, 5000);
+  return res;
 }
 
-const pos = (e) => e.t + (e.play ? (Date.now() - e.marca) / 1000 : 0);
-const estado = (s) => {
-  const e = salas[s];
-  return { id: e.id, titulo: e.titulo, t: pos(e), play: e.play };
-};
-const envLista = (dest, e) => dest.emit('lista', { items: e.lista, pos: e.pos });
-
-async function usuarios(s) {
-  const so = await io.in(s).fetchSockets();
-  io.to(s).emit('usuarios', so.map(x => ({ id: x.id, nombre: x.data.nombre, host: x.id === salas[s].host })));
+function extraerVideosDeObjeto(obj, mapa) {
+  if (!obj || typeof obj !== 'object') return;
+  if (Array.isArray(obj)) {
+    for (const item of obj) extraerVideosDeObjeto(item, mapa);
+    return;
+  }
+  const r = obj.playlistVideoRenderer || obj.playlistPanelVideoRenderer;
+  if (r && r.videoId && !mapa.has(r.videoId)) {
+    const titulo = r.title?.runs?.map(x => x.text).join('') || r.title?.simpleText || r.videoId;
+    mapa.set(r.videoId, { id: r.videoId, titulo, fuente: 'yt' });
+  }
+  for (const k of Object.keys(obj)) extraerVideosDeObjeto(obj[k], mapa);
 }
 
-function poner(s, id, tit, p) {
-  const e = salas[s];
-  Object.assign(e, { id, titulo: tit, t: 0, play: true, marca: Date.now(), pos: p });
-  e.historial = [{ id, titulo: tit }, ...e.historial.filter(x => x.id !== id)].slice(0, 50);
-  io.to(s).emit('estado', estado(s));
-  io.to(s).emit('historial', e.historial);
-  io.to(s).emit('chatVideo', { id, titulo: tit });
-  envLista(io.to(s), e);
+async function obtenerPlaylist(listId) {
+  if (!listId) return [];
+  try {
+    const html = await fetchTexto(`https://www.youtube.com/playlist?list=${encodeURIComponent(listId)}`);
+    const mapa = new Map();
+    const m1 = html.match(/var ytInitialData\s*=\s*(\{[\s\S]*?\});\s*<\/script>/);
+    const m2 = html.match(/ytInitialData\]\s*=\s*(\{[\s\S]*?\});\s*<\/script>/);
+    const jsonStr = (m1 && m1[1]) || (m2 && m2[1]);
+    if (jsonStr) {
+      try { extraerVideosDeObjeto(JSON.parse(jsonStr), mapa); } catch (e) {}
+    }
+    if (!mapa.size) {
+      const regex = /"videoId":"([\w-]{11})"[\s\S]{0,400}?"title":\{"runs":\[\{"text":"([^"]+)"/g;
+      let match;
+      while ((match = regex.exec(html)) !== null && mapa.size < 500) {
+        const id = match[1];
+        const titulo = match[2].replace(/\\u0026/g, '&').replace(/\\"/g, '"');
+        if (!mapa.has(id)) mapa.set(id, { id, titulo, fuente: 'yt' });
+      }
+    }
+    return Array.from(mapa.values()).slice(0, 500);
+  } catch (e) {
+    return [];
+  }
 }
 
-function siguienteDe(s) {
-  const e = salas[s];
-  const n = e.lista[e.pos + 1];
-  if (n) poner(s, n.id, n.titulo, e.pos + 1);
-  else io.to(s).emit('aviso', 'No hay más videos en la lista');
-}
-
+/* ---------- Socket.IO ---------- */
 io.on('connection', (socket) => {
+  let salaActual = null;
+
   socket.on('entrar', ({ sala, nombre }) => {
-    socket.join(sala);
-    socket.data.sala = sala;
-    socket.data.nombre = String(nombre || 'Invitado').slice(0, 20);
-    const e = (salas[sala] = salas[sala] || { id: null, titulo: '', t: 0, play: false, marca: Date.now(), host: null, lista: [], pos: -1, historial: [] });
-    if (!e.host) e.host = socket.id;
-    if (e.id) socket.emit('estado', estado(sala));
-    envLista(socket, e);
-    socket.emit('historial', e.historial);
-    usuarios(sala);
-  });
+    const codigo = String(sala || '').trim().replace(/[^\w-]/g, '').slice(0, 30);
+    if (!codigo) return;
 
-  socket.on('nombre', (n) => {
-    const s = socket.data.sala; if (!s || typeof n !== 'string') return;
-    socket.data.nombre = n.trim().slice(0, 20) || socket.data.nombre;
-    usuarios(s);
-  });
-
-  socket.on('cargar', async (id) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || !okId(id)) return;
-    const i = e.lista.findIndex(x => x.id === id);
-    poner(s, id, i >= 0 ? e.lista[i].titulo : await tituloVideo(id), i);
-  });
-
-  socket.on('reproducir', (i) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || !e.lista[i]) return;
-    poner(s, e.lista[i].id, e.lista[i].titulo, i);
-  });
-
-  socket.on('siguiente', () => {
-    const s = socket.data.sala; if (!s || !salas[s]) return;
-    siguienteDe(s);
-  });
-
-  socket.on('fin', (id) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || e.id !== id) return;
-    const n = e.lista[e.pos + 1];
-    if (n) poner(s, n.id, n.titulo, e.pos + 1);
-    else { e.play = false; e.t = 0; }
-  });
-
-  socket.on('agregar', async (id) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || !okId(id)) return;
-    e.lista.push({ id, titulo: await tituloVideo(id) });
-    envLista(io.to(s), e);
-    io.to(s).emit('aviso', 'Video añadido a la lista');
-  });
-
-  socket.on('playlist', async (pl, cb) => {
-    if (typeof cb !== 'function') return;
-    if (typeof pl !== 'string' || !/^[\w-]+$/.test(pl)) return cb(null);
-    try {
-      const l = await leerPlaylist(pl);
-      cb(l && l.length ? l : null);
-    } catch (e) { cb(null); }
-  });
-
-  socket.on('titulos', async (ids, cb) => {
-    if (!Array.isArray(ids) || typeof cb !== 'function') return;
-    ids = [...new Set(ids)].filter(okId).slice(0, 5000);
-    const out = [];
-    for (let i = 0; i < ids.length; i += 10) {
-      const r = await Promise.all(ids.slice(i, i + 10).map(async (id) => ({ id, titulo: await tituloVideo(id, null) })));
-      r.forEach(v => v.titulo && out.push(v));
+    if (salaActual && salaActual.codigo !== codigo) {
+      salaActual.usuarios.delete(socket.id);
+      socket.leave(salaActual.codigo);
+      emitirUsuarios(salaActual);
     }
-    cb(out);
+
+    const salaObj = obtenerSala(codigo);
+    salaActual = salaObj;
+    socket.join(codigo);
+
+    const noTieneHost = !Array.from(salaObj.usuarios.values()).some(u => u.host);
+    const nomLimpio = String(nombre || 'Invitado').trim().slice(0, 20) || 'Invitado';
+
+    salaObj.usuarios.set(socket.id, { id: socket.id, nombre: nomLimpio, host: noTieneHost });
+
+    emitirUsuarios(salaObj);
+    emitirLista(salaObj, socket);
+    emitirHistorial(salaObj, socket);
+    emitirEstado(salaObj, socket);
   });
 
-  socket.on('importar', (items, cb) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || !Array.isArray(items)) return;
-    const nuevos = items
-      .filter(v => v && okId(v.id) && typeof v.titulo === 'string')
-      .slice(0, 5000)
-      .map(v => ({ id: v.id, titulo: v.titulo.slice(0, 150) }));
-    e.lista.push(...nuevos);
-    envLista(io.to(s), e);
-    io.to(s).emit('aviso', nuevos.length + ' videos añadidos a la lista');
-    if (typeof cb === 'function') cb(nuevos.length);
+  socket.on('nombre', (nuevoNombre) => {
+    if (!salaActual) return;
+    const u = salaActual.usuarios.get(socket.id);
+    if (!u) return;
+    const limp = String(nuevoNombre || '').trim().slice(0, 20);
+    if (limp) { u.nombre = limp; emitirUsuarios(salaActual); }
   });
 
-  socket.on('sugerir', (v) => {
-    const s = socket.data.sala; if (!s || !v || !okId(v.id) || typeof v.titulo !== 'string') return;
-    io.to(s).emit('chatVideo', { id: v.id, titulo: v.titulo.slice(0, 150), nombre: socket.data.nombre });
-  });
-
-  socket.on('renombrar', ({ i, titulo }) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || !e.lista[i] || typeof titulo !== 'string') return;
-    e.lista[i].titulo = titulo.trim().slice(0, 150) || e.lista[i].titulo;
-    envLista(io.to(s), e);
-  });
-
-  socket.on('quitar', (i) => {
-    const s = socket.data.sala, e = salas[s];
-    if (!e || !e.lista[i]) return;
-    e.lista.splice(i, 1);
-    if (i <= e.pos) e.pos--;
-    envLista(io.to(s), e);
-  });
-
-  socket.on('mezclar', () => {
-    const s = socket.data.sala, e = salas[s]; if (!e) return;
-    for (let i = e.lista.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [e.lista[i], e.lista[j]] = [e.lista[j], e.lista[i]];
+  socket.on('toggleVip', () => {
+    if (!salaActual) return;
+    if (!esHost(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Solo el anfitrión 👑 puede cambiar el modo VIP');
     }
-    e.pos = e.lista.findIndex(x => x.id === e.id);
-    envLista(io.to(s), e);
+    salaActual.vip = !salaActual.vip;
+    io.to(salaActual.codigo).emit('aviso', salaActual.vip ? 'Modo VIP activado (solo 👑 controla)' : 'Modo VIP desactivado');
+    emitirEstado(salaActual);
   });
 
-  socket.on('vaciar', () => {
-    const s = socket.data.sala, e = salas[s]; if (!e) return;
-    e.lista = []; e.pos = -1;
-    envLista(io.to(s), e);
+  socket.on('expulsar', (targetId) => {
+    if (!salaActual || !targetId) return;
+    if (!esHost(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Solo el anfitrión 👑 puede expulsar usuarios');
+    }
+    if (targetId === socket.id) return;
+    const objetivo = salaActual.usuarios.get(targetId);
+    if (!objetivo) return;
+    salaActual.usuarios.delete(targetId);
+    emitirUsuarios(salaActual);
+    io.to(targetId).emit('expulsado');
+    const sObj = io.sockets.sockets.get(targetId);
+    if (sObj) sObj.leave(salaActual.codigo);
+    io.to(salaActual.codigo).emit('aviso', `${objetivo.nombre} fue expulsado de la sala`);
   });
 
   socket.on('control', ({ play, t }) => {
-    const s = socket.data.sala; if (!s || !salas[s]) return;
-    Object.assign(salas[s], { play, t, marca: Date.now() });
-    socket.to(s).emit('estado', estado(s));
+    if (!salaActual) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      emitirEstado(salaActual, socket);
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 controla la reproducción');
+    }
+    const tiempo = typeof t === 'number' && !Number.isNaN(t) ? Math.max(0, t) : tiempoActual(salaActual);
+    salaActual.estado = { ...salaActual.estado, play: Boolean(play), t: tiempo, ts: Date.now() };
+    socket.to(salaActual.codigo).emit('estado', {
+      id: salaActual.estado.id,
+      fuente: salaActual.estado.fuente || 'yt',
+      play: salaActual.estado.play,
+      t: salaActual.estado.t,
+      vip: Boolean(salaActual.vip)
+    });
+  });
+
+  socket.on('fin', (videoIdTerminado) => {
+    if (!salaActual || !salaActual.items.length) return;
+    if (!puedeControlar(salaActual, socket.id)) return;
+    let idx = salaActual.pos;
+    if (idx < 0 && videoIdTerminado) {
+      idx = salaActual.items.findIndex(v => v.id === videoIdTerminado);
+    }
+    const siguienteIdx = idx + 1;
+    if (siguienteIdx < salaActual.items.length) {
+      reproducirIndice(salaActual, siguienteIdx);
+    } else {
+      salaActual.estado.play = false;
+      salaActual.estado.t = 0;
+      salaActual.estado.ts = Date.now();
+    }
+  });
+
+  socket.on('cargar', async (payload) => {
+    if (!salaActual || !payload) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede cambiar el video');
+    }
+    if (typeof payload === 'object') {
+      const id = String(payload.id || '').trim();
+      const fuente = payload.fuente === 'tubi' ? 'tubi' : 'yt';
+      const titulo = payload.titulo || id;
+      if (!id) return;
+      if (fuente === 'tubi') return cargarVideoDirecto(salaActual, id, titulo, 'tubi');
+      const info = await obtenerTituloVideo(id);
+      return cargarVideoDirecto(salaActual, info.id, info.titulo, 'yt');
+    }
+    const info = await obtenerTituloVideo(String(payload).trim());
+    cargarVideoDirecto(salaActual, info.id, info.titulo, 'yt');
+  });
+
+  socket.on('reproducir', (idx) => {
+    if (!salaActual) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 controla la lista');
+    }
+    reproducirIndice(salaActual, Number(idx) || 0);
+  });
+
+  socket.on('siguiente', () => {
+    if (!salaActual || !salaActual.items.length) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 controla la lista');
+    }
+    const next = salaActual.pos < 0 ? 0 : (salaActual.pos + 1) % salaActual.items.length;
+    reproducirIndice(salaActual, next);
+  });
+
+  socket.on('mezclar', () => {
+    if (!salaActual || salaActual.items.length < 2) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede mezclar');
+    }
+    const actual = salaActual.pos >= 0 ? salaActual.items[salaActual.pos] : null;
+    for (let i = salaActual.items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [salaActual.items[i], salaActual.items[j]] = [salaActual.items[j], salaActual.items[i]];
+    }
+    salaActual.pos = actual ? salaActual.items.findIndex(v => v.id === actual.id) : -1;
+    emitirLista(salaActual);
+    socket.emit('aviso', 'Lista mezclada');
+  });
+
+  socket.on('vaciar', () => {
+    if (!salaActual) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede vaciar la lista');
+    }
+    salaActual.items = [];
+    salaActual.pos = -1;
+    emitirLista(salaActual);
+    socket.emit('aviso', 'Lista vaciada');
+  });
+
+  socket.on('quitar', (idx) => {
+    if (!salaActual) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede quitar videos');
+    }
+    const i = Number(idx);
+    if (i < 0 || i >= salaActual.items.length) return;
+    salaActual.items.splice(i, 1);
+    if (salaActual.items.length === 0) salaActual.pos = -1;
+    else if (i < salaActual.pos) salaActual.pos--;
+    else if (i === salaActual.pos) salaActual.pos = Math.min(salaActual.pos, salaActual.items.length - 1);
+    emitirLista(salaActual);
+  });
+
+  socket.on('renombrar', ({ i, titulo }) => {
+    if (!salaActual) return;
+    if (!puedeControlar(salaActual, socket.id)) {
+      return socket.emit('aviso', 'Modo VIP activo: solo el anfitrión 👑 puede renombrar');
+    }
+    const idx = Number(i);
+    const nuevo = String(titulo || '').trim().slice(0, 120);
+    if (idx < 0 || idx >= salaActual.items.length || !nuevo) return;
+    salaActual.items[idx].titulo = nuevo;
+    emitirLista(salaActual);
+  });
+
+  socket.on('agregar', async (payload) => {
+    if (!salaActual || !payload) return;
+    if (typeof payload === 'object') {
+      const id = String(payload.id || '').trim();
+      const fuente = payload.fuente === 'tubi' ? 'tubi' : 'yt';
+      const titulo = String(payload.titulo || id).trim().slice(0, 140);
+      if (!id) return;
+      salaActual.items.push({ id, titulo, fuente });
+      emitirLista(salaActual);
+      return socket.emit('aviso', 'Añadido a la lista');
+    }
+    const info = await obtenerTituloVideo(String(payload).trim());
+    salaActual.items.push({ id: info.id, titulo: info.titulo, fuente: 'yt' });
+    emitirLista(salaActual);
+    socket.emit('aviso', 'Añadido a la lista');
+  });
+
+  socket.on('importar', (listaVideos, ack) => {
+    if (!salaActual || !Array.isArray(listaVideos)) {
+      if (typeof ack === 'function') ack();
+      return;
+    }
+    const limpios = listaVideos
+      .filter(v => v && v.id)
+      .slice(0, 500)
+      .map(v => ({
+        id: String(v.id).trim(),
+        titulo: String(v.titulo || v.id).trim().slice(0, 140),
+        fuente: v.fuente === 'tubi' ? 'tubi' : 'yt'
+      }));
+    salaActual.items.push(...limpios);
+    emitirLista(salaActual);
+    socket.emit('aviso', `Se importaron ${limpios.length} videos`);
+    if (typeof ack === 'function') ack();
+  });
+
+  socket.on('titulos', async (ids, ack) => {
+    const res = await obtenerTitulos(Array.isArray(ids) ? ids : []);
+    if (typeof ack === 'function') ack(res);
+  });
+
+  socket.on('playlist', async (listId, ack) => {
+    const res = await obtenerPlaylist(String(listId || '').trim());
+    if (typeof ack === 'function') ack(res);
   });
 
   socket.on('chat', (texto) => {
-    const s = socket.data.sala; if (!s) return;
-    io.to(s).emit('chat', { nombre: socket.data.nombre, texto: String(texto).slice(0, 300) });
+    if (!salaActual) return;
+    const u = salaActual.usuarios.get(socket.id);
+    const limpio = String(texto || '').trim().slice(0, 500);
+    if (!limpio) return;
+    io.to(salaActual.codigo).emit('chat', {
+      nombre: u ? u.nombre : 'Invitado',
+      texto: limpio
+    });
+  });
+
+  socket.on('sugerir', (video) => {
+    if (!salaActual || !video || !video.id) return;
+    const u = salaActual.usuarios.get(socket.id);
+    io.to(salaActual.codigo).emit('chatVideo', {
+      nombre: u ? u.nombre : 'Invitado',
+      id: String(video.id),
+      titulo: String(video.titulo || video.id),
+      fuente: video.fuente === 'tubi' ? 'tubi' : 'yt'
+    });
   });
 
   socket.on('senal', ({ para, tipo, datos }) => {
+    if (!para || !tipo) return;
     io.to(para).emit('senal', { de: socket.id, tipo, datos });
   });
 
-  socket.on('disconnect', async () => {
-    const s = socket.data.sala; if (!s || !salas[s]) return;
-    if (salas[s].host === socket.id) {
-      const so = await io.in(s).fetchSockets();
-      salas[s].host = so.length ? so[0].id : null;
+  socket.on('disconnect', () => {
+    if (!salaActual) return;
+    const eraHost = salaActual.usuarios.get(socket.id)?.host;
+    salaActual.usuarios.delete(socket.id);
+
+    if (salaActual.usuarios.size === 0) {
+      salas.delete(salaActual.codigo);
+      return;
     }
-    usuarios(s);
+
+    if (eraHost) {
+      const siguiente = salaActual.usuarios.values().next().value;
+      if (siguiente) siguiente.host = true;
+    }
+    emitirUsuarios(salaActual);
   });
 });
 
-server.listen(process.env.PORT || 3000);
+server.listen(PORT, () => {
+  console.log(`Cine2Gether escuchando en el puerto ${PORT}`);
+});
