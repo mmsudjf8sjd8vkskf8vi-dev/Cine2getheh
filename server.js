@@ -9,6 +9,12 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
+const FUENTES_EXT = new Set(['tubi', 'pluto', 'vix', 'mplay', 'archive', 'plex']);
+
+function normFuente(f) {
+  const s = String(f || 'yt').trim().toLowerCase();
+  return FUENTES_EXT.has(s) ? s : 'yt';
+}
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
@@ -55,7 +61,7 @@ function tiempoActual(salaObj) {
 function emitirEstado(salaObj, target = null) {
   const payload = {
     id: salaObj.estado.id,
-    fuente: salaObj.estado.fuente || 'yt',
+    fuente: normFuente(salaObj.estado.fuente),
     play: Boolean(salaObj.estado.play),
     t: tiempoActual(salaObj),
     vip: Boolean(salaObj.vip)
@@ -85,11 +91,11 @@ function agregarHistorial(salaObj, video) {
   const item = {
     id: String(video.id),
     titulo: String(video.titulo || video.id),
-    fuente: video.fuente === 'tubi' ? 'tubi' : 'yt'
+    fuente: normFuente(video.fuente)
   };
   salaObj.historial = [
     item,
-    ...salaObj.historial.filter(v => !(v.id === item.id && v.fuente === item.fuente))
+    ...salaObj.historial.filter(v => !(v.id === item.id && normFuente(v.fuente) === item.fuente))
   ].slice(0, 50);
   emitirHistorial(salaObj);
 }
@@ -99,7 +105,7 @@ function reproducirIndice(salaObj, idx) {
   const i = ((idx % salaObj.items.length) + salaObj.items.length) % salaObj.items.length;
   salaObj.pos = i;
   const v = salaObj.items[i];
-  const fuente = v.fuente === 'tubi' ? 'tubi' : 'yt';
+  const fuente = normFuente(v.fuente);
   salaObj.estado = { id: v.id, fuente, play: true, t: 0, ts: Date.now() };
   agregarHistorial(salaObj, v);
   emitirLista(salaObj);
@@ -110,8 +116,8 @@ function cargarVideoDirecto(salaObj, id, titulo = null, fuente = 'yt') {
   if (!id) return;
   const limpio = String(id).trim();
   if (!limpio) return;
-  const src = fuente === 'tubi' ? 'tubi' : 'yt';
-  const idx = salaObj.items.findIndex(v => v.id === limpio && (v.fuente || 'yt') === src);
+  const src = normFuente(fuente);
+  const idx = salaObj.items.findIndex(v => v.id === limpio && normFuente(v.fuente) === src);
   if (idx !== -1) salaObj.pos = idx;
   salaObj.estado = { id: limpio, fuente: src, play: true, t: 0, ts: Date.now() };
   agregarHistorial(salaObj, { id: limpio, titulo: titulo || limpio, fuente: src });
@@ -282,7 +288,7 @@ io.on('connection', (socket) => {
     salaActual.estado = { ...salaActual.estado, play: Boolean(play), t: tiempo, ts: Date.now() };
     socket.to(salaActual.codigo).emit('estado', {
       id: salaActual.estado.id,
-      fuente: salaActual.estado.fuente || 'yt',
+      fuente: normFuente(salaActual.estado.fuente),
       play: salaActual.estado.play,
       t: salaActual.estado.t,
       vip: Boolean(salaActual.vip)
@@ -313,10 +319,10 @@ io.on('connection', (socket) => {
     }
     if (typeof payload === 'object') {
       const id = String(payload.id || '').trim();
-      const fuente = payload.fuente === 'tubi' ? 'tubi' : 'yt';
+      const fuente = normFuente(payload.fuente);
       const titulo = payload.titulo || id;
       if (!id) return;
-      if (fuente === 'tubi') return cargarVideoDirecto(salaActual, id, titulo, 'tubi');
+      if (fuente !== 'yt') return cargarVideoDirecto(salaActual, id, titulo, fuente);
       const info = await obtenerTituloVideo(id);
       return cargarVideoDirecto(salaActual, info.id, info.titulo, 'yt');
     }
@@ -397,7 +403,7 @@ io.on('connection', (socket) => {
     if (!salaActual || !payload) return;
     if (typeof payload === 'object') {
       const id = String(payload.id || '').trim();
-      const fuente = payload.fuente === 'tubi' ? 'tubi' : 'yt';
+      const fuente = normFuente(payload.fuente);
       const titulo = String(payload.titulo || id).trim().slice(0, 140);
       if (!id) return;
       salaActual.items.push({ id, titulo, fuente });
@@ -421,7 +427,7 @@ io.on('connection', (socket) => {
       .map(v => ({
         id: String(v.id).trim(),
         titulo: String(v.titulo || v.id).trim().slice(0, 140),
-        fuente: v.fuente === 'tubi' ? 'tubi' : 'yt'
+        fuente: normFuente(v.fuente)
       }));
     salaActual.items.push(...limpios);
     emitirLista(salaActual);
@@ -457,7 +463,7 @@ io.on('connection', (socket) => {
       nombre: u ? u.nombre : 'Invitado',
       id: String(video.id),
       titulo: String(video.titulo || video.id),
-      fuente: video.fuente === 'tubi' ? 'tubi' : 'yt'
+      fuente: normFuente(video.fuente)
     });
   });
 
